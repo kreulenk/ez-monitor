@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	f, err := os.ReadFile("./test/inv-complete.yml")
+	f, err := os.ReadFile("./test/groups-no-all.yml")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -21,5 +21,11 @@ func main() {
 
 	hosts := inv.GetHosts()
 
-	fmt.Println(hosts)
+	fmt.Println("The following hosts were found in the inventory:")
+	for hostName, hostVars := range hosts {
+		fmt.Printf("%s\n", hostName)
+		for k, v := range hostVars.Variables {
+			fmt.Printf("\t%s: %v\n", k, v)
+		}
+	}
 }

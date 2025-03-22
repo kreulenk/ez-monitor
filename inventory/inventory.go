@@ -1,6 +1,7 @@
 package inventory
 
 import (
+	"fmt"
 	"gopkg.in/yaml.v3"
 	"maps"
 )
@@ -19,19 +20,37 @@ type Group struct {
 
 // Inventory represents the complete inventory
 type Inventory struct {
-	All Group `yaml:"all"`
+	All *Group `yaml:"all"`
 }
 
 func LoadInventory(yamlData []byte) (*Inventory, error) {
+	// First attempt to unmarshal assuming the inv file starts with the all: group
 	inv := &Inventory{}
 	err := yaml.Unmarshal(yamlData, inv)
 	if err != nil {
 		return nil, err
 	}
-	return inv, nil
+	if len(inv.GetHosts()) != 0 {
+		return inv, nil
+	}
+
+	// Second attempt to unmarshal assuming the inv file starts with groups
+	group := map[string]*Group{}
+	err = yaml.Unmarshal(yamlData, &group)
+	if err != nil {
+		return nil, err
+	}
+	inv = &Inventory{All: &Group{Children: group}}
+	if len(inv.GetHosts()) != 0 {
+		return inv, nil
+	}
+	return nil, fmt.Errorf("no hosts found in inventory")
 }
 
 func (i *Inventory) GetHosts() map[string]*Host {
+	if i.All == nil {
+		return nil
+	}
 	allHosts := maps.Clone(i.All.Hosts)
 	groupVars := maps.Clone(i.All.Variables) // Track the groupVars that will be passed down
 
