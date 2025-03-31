@@ -2,6 +2,7 @@ package inventory
 
 import (
 	"fmt"
+	"gopkg.in/ini.v1"
 	"gopkg.in/yaml.v3"
 	"maps"
 )
@@ -20,10 +21,64 @@ type Group struct {
 
 // Inventory represents the complete inventory
 type Inventory struct {
-	All *Group `yaml:"all"`
+	All       *Group `yaml:"all"`
+	Ungrouped *Group `yaml:"ungrouped,omitempty"`
 }
 
-func LoadInventory(yamlData []byte) (*Inventory, error) {
+func LoadInventory(data []byte, format string) (*Inventory, error) {
+	switch format {
+	case "yaml", "yml":
+		return loadYamlInventory(data)
+	case "ini":
+		return loadIniInventory(data)
+	default:
+		return nil, fmt.Errorf("unsupported format: %s", format)
+	}
+}
+
+func loadIniInventory(iniData []byte) (*Inventory, error) {
+	cfg, err := ini.LoadSources(ini.LoadOptions{AllowBooleanKeys: true}, iniData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load ini data: %s", err)
+	}
+
+	inv := &Inventory{
+		All: &Group{
+			Hosts:     make(map[string]*Host),
+			Variables: make(map[string]interface{}),
+			Children:  make(map[string]*Group),
+		},
+		Ungrouped: &Group{
+			Hosts:     make(map[string]*Host),
+			Variables: make(map[string]interface{}),
+		},
+	}
+
+	for _, section := range cfg.Sections() {
+		if section.Name() == ini.DefaultSection {
+			for _, key := range section.Keys() {
+				inv.Ungrouped.Hosts[key.Name()] = &Host{
+					Variables: make(map[string]interface{}),
+				}
+			}
+		} else {
+			group := &Group{
+				Hosts:     make(map[string]*Host),
+				Variables: make(map[string]interface{}),
+			}
+			for _, key := range section.Keys() {
+				group.Hosts[key.Name()] = &Host{
+					Variables: make(map[string]interface{}),
+				}
+			}
+			inv.All.Children[section.Name()] = group
+		}
+	}
+
+	return inv, nil
+}
+
+func loadYamlInventory(yamlData []byte) (*Inventory, error) {
 	// First attempt to unmarshal assuming the inv file starts with the all: group
 	inv := &Inventory{}
 	err := yaml.Unmarshal(yamlData, inv)
