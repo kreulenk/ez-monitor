@@ -1,8 +1,0 @@
-ssh-hosts:
-  hosts:
-    ubuntu-host-1:
-      host: 192.168.1.100
-      user: ubuntu
-      port: 22
-  vars:
-    some-other-var: 80
