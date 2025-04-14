@@ -1,6 +1,7 @@
 package stats
 
 import (
+	"context"
 	"ez-monitor/pkg/inventory"
 	"fmt"
 	"github.com/mitchellh/go-homedir"
@@ -8,12 +9,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
 type HostStats struct {
-	Name        string
+	NameOfHost  string // The term hostname makes naming this field difficult...
 	Address     string
 	CPUUsage    float64
 	MemoryUsage float64
@@ -133,28 +133,21 @@ func getMemoryUsage(client *ssh.Client) (used float64, total float64, err error)
 	return usedMem, totalMem, nil
 }
 
-func getHostStats(host inventory.Host) HostStats {
+func getHostStats(host ConnectionInfo) HostStats {
 	stats := HostStats{
-		Name:      host.Name,
-		Address:   host.Address,
-		Timestamp: time.Now(),
+		NameOfHost: host.InventoryInfo.Name,
+		Address:    host.InventoryInfo.Address,
+		Timestamp:  time.Now(),
 	}
 
-	client, err := connectToHost(host)
-	if err != nil {
-		stats.Error = err
-		return stats
-	}
-	defer client.Close()
-
-	cpuUsage, err := getCPUUsage(client)
+	cpuUsage, err := getCPUUsage(host.connectionClient)
 	if err != nil {
 		stats.Error = err
 		return stats
 	}
 	stats.CPUUsage = cpuUsage
 
-	memUsed, memTotal, err := getMemoryUsage(client)
+	memUsed, memTotal, err := getMemoryUsage(host.connectionClient)
 	if err != nil {
 		stats.Error = err
 		return stats
@@ -164,26 +157,27 @@ func getHostStats(host inventory.Host) HostStats {
 	return stats
 }
 
-func CollectHostStats(hosts []inventory.Host) []HostStats {
-	var wg sync.WaitGroup
-	statsChan := make(chan HostStats, len(hosts))
+func StartStatisticsCollection(ctx context.Context, inventoryInfo []inventory.Host) (chan HostStats, error) {
+	hosts, err := connectToHosts(inventoryInfo) // We close the connections when the context cancels in the loop below
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to hosts: %s", err)
+	}
 
+	statsChan := make(chan HostStats)
 	for _, host := range hosts {
-		wg.Add(1)
-		go func(host inventory.Host) {
-			defer wg.Done()
-			stat := getHostStats(host)
-			statsChan <- stat
-		}(host)
+		go func(host ConnectionInfo, statsChan chan HostStats) {
+			ticker := time.NewTicker(time.Second * 2)
+			for {
+				select {
+				case <-ticker.C:
+					stat := getHostStats(host)
+					statsChan <- stat
+				case <-ctx.Done():
+					host.connectionClient.Close()
+					return
+				}
+			}
+		}(host, statsChan)
 	}
-
-	wg.Wait()
-	close(statsChan)
-
-	var results []HostStats
-	for stats := range statsChan {
-		results = append(results, stats)
-	}
-
-	return results
+	return statsChan, nil
 }
