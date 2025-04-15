@@ -65,21 +65,16 @@ func (m *Model) View() string {
 	// Create the full bar with background and overlay the value bar
 	bars := make([]string, m.height)
 	for i := 0; i < m.height; i++ {
-		var barText string
 		if i == 0 && m.maxValue != m.minValue {
-			barText = overlayTextOnBar(m.width, fmt.Sprintf("%.1f %s", m.maxValue, m.unit))
+			bars[i] = overlayTextOnBar(m.width, fmt.Sprintf("%.1f %s", m.maxValue, m.unit), m.styles.BackGroundBar)
 		} else if i == m.height-valueBarHeight-1 {
-			barText = overlayTextOnBar(m.width, fmt.Sprintf("%.1f %s", m.currentValue, m.unit))
+			bars[i] = overlayTextOnBar(m.width, fmt.Sprintf("%.1f %s", m.currentValue, m.unit), m.styles.BackGroundBar)
 		} else if i == m.height-1 {
-			barText = overlayTextOnBar(m.width, fmt.Sprintf("%.1f %s", m.minValue, m.unit))
+			bars[i] = overlayTextOnBar(m.width, fmt.Sprintf("%.1f %s", m.minValue, m.unit), m.styles.ValueBar)
+		} else if i < m.height-valueBarHeight {
+			bars[i] = m.styles.BackGroundBar.Render(strings.Repeat("█", m.width))
 		} else {
-			barText = strings.Repeat("█", m.width)
-		}
-
-		if i < m.height-valueBarHeight {
-			bars[i] = m.styles.BackGroundBar.Render(barText)
-		} else {
-			bars[i] = m.styles.ValueBar.Render(barText)
+			bars[i] = m.styles.ValueBar.Render(strings.Repeat("█", m.width))
 		}
 	}
 
@@ -92,7 +87,7 @@ func (m *Model) View() string {
 // overlayTextOnBar will take in a bar of a specific length and will overlay given text onto the
 // bar. The text will be centered. If the text width is too long, the … character will be used to
 // truncate the value
-func overlayTextOnBar(barWidth int, text string) string {
+func overlayTextOnBar(barWidth int, text string, barStyle lipgloss.Style) string {
 	textWidth := lipgloss.Width(text)
 
 	if textWidth > barWidth {
@@ -107,5 +102,8 @@ func overlayTextOnBar(barWidth int, text string) string {
 
 	leftBarWidth := (barWidth - textWidth) / 2
 	rightBarWidth := barWidth - textWidth - leftBarWidth
-	return strings.Repeat("█", leftBarWidth) + text + strings.Repeat("█", rightBarWidth)
+
+	leftBar := barStyle.Render(strings.Repeat("█", leftBarWidth))
+	rightBar := barStyle.Render(strings.Repeat("█", rightBarWidth))
+	return leftBar + text + rightBar
 }
