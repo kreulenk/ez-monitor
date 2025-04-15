@@ -2,7 +2,8 @@ package cmd
 
 import (
 	"ez-monitor/pkg/inventory"
-	"ez-monitor/pkg/stats"
+	"ez-monitor/pkg/statistics"
+	"ez-monitor/pkg/tui"
 	"fmt"
 	"github.com/spf13/cobra"
 	"os"
@@ -18,6 +19,8 @@ func genRootCmd() *cobra.Command {
 		Long:  `ez-monitor allows you to easily monitor your infrastructure by only requiring SSH connections`,
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
+			ctx := cmd.Context()
+
 			filename := args[0]
 			inventoryInfo, err := inventory.LoadInventory(filename)
 			if err != nil {
@@ -25,11 +28,13 @@ func genRootCmd() *cobra.Command {
 				os.Exit(1)
 			}
 
-			statsChan, err := stats.StartStatisticsCollection(cmd.Context(), inventoryInfo)
+			statsChan, err := statistics.StartStatisticsCollection(ctx, inventoryInfo)
 			if err != nil {
 				fmt.Println(err)
 			}
-			printStats(statsChan)
+			tui.Initialize(ctx, statsChan)
+
+			//printStats(statsChan)
 		},
 	}
 	return cmd
@@ -43,8 +48,9 @@ func Execute() {
 	}
 }
 
-func printStats(statsChan chan stats.HostStats) {
-	mostRecentStat := map[string]*stats.HostStats{}
+// TODO remove this function once the TUI is fully in place
+func printStats(statsChan chan statistics.HostStats) {
+	mostRecentStat := map[string]*statistics.HostStats{}
 
 	// Create a new tab writer
 	for s := range statsChan {
