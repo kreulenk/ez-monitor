@@ -32,7 +32,7 @@ func genRootCmd() *cobra.Command {
 			if err != nil {
 				fmt.Println(err)
 			}
-			tui.Initialize(ctx, statsChan)
+			tui.Initialize(ctx, inventoryInfo, statsChan)
 
 			//printStats(statsChan)
 		},

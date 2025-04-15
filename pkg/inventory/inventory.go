@@ -72,5 +72,4 @@ func LoadInventory(filename string) ([]Host, error) {
 	}
 
 	return hostList, nil
-
 }

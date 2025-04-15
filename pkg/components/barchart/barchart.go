@@ -78,10 +78,10 @@ func (m *Model) View() string {
 		}
 	}
 
-	barView := lipgloss.JoinVertical(lipgloss.Left, bars...)
+	barView := lipgloss.JoinVertical(lipgloss.Top, bars...)
 	statNameView := lipgloss.NewStyle().MarginLeft(m.width/2 - 3).Render(m.statName)
 
-	return lipgloss.JoinVertical(lipgloss.Left, barView, statNameView)
+	return lipgloss.JoinVertical(lipgloss.Top, barView, statNameView)
 }
 
 // overlayTextOnBar will take in a bar of a specific length and will overlay given text onto the
