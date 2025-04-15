@@ -32,7 +32,7 @@ func initialModel(ctx context.Context, statsChan chan statistics.HostStats) tea.
 	return baseModel{
 		ctx: ctx,
 
-		memBarChart: barchart.New(0, 0), // 0 max value as we do not yet know the max
+		memBarChart: barchart.New("memory", "MB", 0, 0), // 0 max value as we do not yet know the max
 
 		statsChan: statsChan,
 	}
@@ -68,11 +68,13 @@ func (m baseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case statsMsg:
-		// Handle the stats message
 		m.memBarChart.SetCurrentValue(msg.MemoryUsage)
 		m.memBarChart.SetMaxValue(msg.MemoryTotal)
-		// Continue listening for more messages
 		return m, listenForStats(m.ctx, m.statsChan)
+
+	case tea.WindowSizeMsg:
+		m.memBarChart.SetWidth(msg.Width / 4)
+		m.memBarChart.SetHeight(msg.Height)
 	}
 
 	return m, nil
