@@ -66,7 +66,7 @@ mv ./ez-monitor /usr/local/bin/ez-monitor
 
 ### Build From Source
 
-Ensure that you have at least Go 1.23 installed on your system.
+Ensure that you have at least Go 1.24 installed on your system.
 
 Then, run
 ```bash
