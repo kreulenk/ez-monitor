@@ -43,6 +43,36 @@ Once you have your inventory file defined, simply run `ez-monitor` with a path t
 ez-monitor inventory.ini
 ```
 
+## Installation
+
+### MacOS
+If you have HomeBrew installed, use the tap shown below.
+
+```bash
+brew tap kreulenk/brew
+brew install ez-monitor
+```
+
+### Linux
+Navigate to the Releases section of EZ-Monitor's GitHub repository and download the latest tar for your
+processor architecture. Then, untar the executable and move it to `/usr/local/bin/ez-monitor`.
+
+E.g.
+```
+curl -OL https://github.com/kreulenk/ez-monitor/releases/download/v0.1.0/ez-monitor-linux-amd64.tar.gz
+tar -xzvf ez-monitor-linux-amd64.tar.gz
+mv ./ez-monitor /usr/local/bin/ez-monitor
+```
+
+### Build From Source
+
+Ensure that you have at least Go 1.23 installed on your system.
+
+Then, run
+```bash
+make install
+```
+
 ## Development Roadmap
 The high level plan for this project is as follows:
 
