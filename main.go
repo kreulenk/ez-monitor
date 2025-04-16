@@ -1,8 +1,8 @@
 package main
 
 import (
-	"ez-monitor/cmd"
-	"ez-monitor/internal/debuglogger"
+	"github.com/kreulenk/ez-monitor/cmd"
+	"github.com/kreulenk/ez-monitor/internal/debuglogger"
 )
 
 func main() {

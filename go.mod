@@ -1,4 +1,4 @@
-module ez-monitor
+module github.com/kreulenk/ez-monitor
 
 go 1.24
 

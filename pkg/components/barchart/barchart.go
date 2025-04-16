@@ -1,10 +1,10 @@
 package barchart
 
 import (
-	"ez-monitor/pkg/renderutils"
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/kreulenk/ez-monitor/pkg/renderutils"
 	"math"
 	"strings"
 )
@@ -18,6 +18,8 @@ type Model struct {
 	currentValue float64
 	width        int
 	height       int
+
+	dataCollectionErr error
 
 	styles Styles
 }
@@ -41,6 +43,11 @@ func (m *Model) Init() tea.Cmd {
 
 func (m *Model) SetCurrentValue(v float64) {
 	m.currentValue = v
+	m.dataCollectionErr = nil
+}
+
+func (m *Model) SetDataCollectionErr(err error) {
+	m.dataCollectionErr = err
 }
 
 func (m *Model) SetMaxValue(v float64) {
@@ -60,17 +67,28 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 }
 
 func (m *Model) View() string {
+	statNameView := lipgloss.NewStyle().Width(m.width - 2).AlignHorizontal(lipgloss.Center).Render(m.statName)
+	totalHeightOfBar := m.height - 3 // 2 for border and 1 for label
+
+	if m.dataCollectionErr != nil {
+		errText := lipgloss.NewStyle().Width(m.width - 2).AlignHorizontal(lipgloss.Center).Render(m.dataCollectionErr.Error())
+		errText = lipgloss.NewStyle().PaddingBottom(totalHeightOfBar - lipgloss.Height(errText)).Render(errText) // Add padding so the label is at the bottom
+
+		text := lipgloss.JoinVertical(lipgloss.Center, errText, statNameView)
+		return m.styles.Graph.Width(m.width - 2).Height(totalHeightOfBar).Render(text)
+	}
+
 	barPercent := m.currentValue / (m.maxValue - m.minValue)
-	valueBarHeight := int(math.Floor(barPercent * float64(m.height)))
+	valueBarHeight := int(math.Floor(barPercent * float64(totalHeightOfBar)))
 
 	// Create the full bar with background and overlay the value bar
-	bars := make([]string, m.height)
-	for i := 0; i < m.height; i++ {
+	bars := make([]string, totalHeightOfBar)
+	for i := 0; i < totalHeightOfBar; i++ {
 		if i == 0 && m.maxValue != m.minValue {
 			bars[i] = overlayTextOnBar(m.width, fmt.Sprintf("%.1f %s", m.maxValue, m.unit), m.styles.BackGroundBar)
-		} else if i == m.height-valueBarHeight-1 {
+		} else if i == totalHeightOfBar-valueBarHeight-1 {
 			bars[i] = overlayTextOnBar(m.width, fmt.Sprintf("%.1f %s", m.currentValue, m.unit), m.styles.BackGroundBar)
-		} else if i < m.height-valueBarHeight {
+		} else if i < totalHeightOfBar-valueBarHeight {
 			bars[i] = m.styles.BackGroundBar.Render(strings.Repeat("█", m.width))
 		} else {
 			bars[i] = m.styles.ValueBar.Render(strings.Repeat("█", m.width))
@@ -78,8 +96,6 @@ func (m *Model) View() string {
 	}
 
 	barView := lipgloss.JoinVertical(lipgloss.Top, bars...)
-	statNameView := lipgloss.NewStyle().MarginLeft(m.width/2 - 3).Render(m.statName)
-
 	graph := lipgloss.JoinVertical(lipgloss.Top, barView, statNameView)
 	return m.styles.Graph.Render(graph)
 }

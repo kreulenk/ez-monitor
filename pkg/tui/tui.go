@@ -2,14 +2,14 @@ package tui
 
 import (
 	"context"
-	"ez-monitor/pkg/components/barchart"
-	"ez-monitor/pkg/inventory"
-	"ez-monitor/pkg/statistics"
 	"fmt"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/kreulenk/ez-monitor/pkg/components/barchart"
+	"github.com/kreulenk/ez-monitor/pkg/inventory"
+	"github.com/kreulenk/ez-monitor/pkg/statistics"
 	"github.com/muesli/termenv"
 	"os"
 )
@@ -115,13 +115,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.WindowSizeMsg:
 		m.memBarChart.SetWidth(msg.Width/3 - 2)
-		m.memBarChart.SetHeight(msg.Height - 5)
+		m.memBarChart.SetHeight(msg.Height - 2)
 
 		m.cpuBarChart.SetWidth(msg.Width/3 - 2)
-		m.cpuBarChart.SetHeight(msg.Height - 5)
+		m.cpuBarChart.SetHeight(msg.Height - 2)
 
 		m.diskBarChart.SetWidth(msg.Width/3 - 2)
-		m.diskBarChart.SetHeight(msg.Height - 5)
+		m.diskBarChart.SetHeight(msg.Height - 2)
 	}
 
 	return m, nil
@@ -144,13 +144,23 @@ func (m Model) View() string {
 	}
 }
 
-func (m *Model) updateChildModelsWithLatestStats(stats statistics.HostStats) barchart.Model {
-	m.memBarChart.SetCurrentValue(stats.MemoryUsage)
-	m.memBarChart.SetMaxValue(stats.MemoryTotal)
+func (m *Model) updateChildModelsWithLatestStats(stats statistics.HostStats) {
+	if stats.MemoryError == nil {
+		m.memBarChart.SetCurrentValue(stats.MemoryUsage)
+		m.memBarChart.SetMaxValue(stats.MemoryTotal)
+	} else {
+		m.memBarChart.SetDataCollectionErr(stats.MemoryError)
+	}
 
-	m.diskBarChart.SetCurrentValue(stats.DiskUsage)
-	m.diskBarChart.SetMaxValue(stats.DiskTotal)
-
-	m.cpuBarChart.SetCurrentValue(stats.CPUUsage)
-	return m.memBarChart
+	if stats.DiskError == nil {
+		m.diskBarChart.SetCurrentValue(stats.DiskUsage)
+		m.diskBarChart.SetMaxValue(stats.DiskTotal)
+	} else {
+		m.diskBarChart.SetDataCollectionErr(stats.DiskError)
+	}
+	if stats.CPUError == nil {
+		m.cpuBarChart.SetCurrentValue(stats.CPUUsage)
+	} else {
+		m.cpuBarChart.SetDataCollectionErr(stats.CPUError)
+	}
 }

@@ -16,9 +16,9 @@ func defaultStyles() Styles {
 			Border(lipgloss.NormalBorder()).
 			BorderForeground(lipgloss.Color("241")),
 		BackGroundBar: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("54")),
+			Foreground(lipgloss.Color("18")),
 		ValueBar: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("57")),
+			Foreground(lipgloss.Color("36")),
 		BarText: lipgloss.NewStyle().
 			Foreground(lipgloss.Color("15")),
 		NameLabel: lipgloss.NewStyle().

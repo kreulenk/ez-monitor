@@ -2,7 +2,7 @@ package statistics
 
 import (
 	"errors"
-	"ez-monitor/pkg/inventory"
+	"github.com/kreulenk/ez-monitor/pkg/inventory"
 	"golang.org/x/crypto/ssh"
 	"sync"
 )

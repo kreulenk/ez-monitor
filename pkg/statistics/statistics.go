@@ -2,11 +2,10 @@ package statistics
 
 import (
 	"context"
-	"ez-monitor/pkg/inventory"
 	"fmt"
+	"github.com/kreulenk/ez-monitor/pkg/inventory"
 	"github.com/mitchellh/go-homedir"
 	"golang.org/x/crypto/ssh"
-	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -14,15 +13,21 @@ import (
 )
 
 type HostStats struct {
-	NameOfHost  string // The term hostname makes naming this field difficult...
-	Address     string
-	CPUUsage    float64
+	NameOfHost string // The term hostname makes naming this field difficult...
+	Address    string
+
+	CPUUsage float64
+	CPUError error
+
 	MemoryUsage float64
 	MemoryTotal float64
-	DiskUsage   float64
-	DiskTotal   float64
-	Error       error
-	Timestamp   time.Time
+	MemoryError error
+
+	DiskUsage float64
+	DiskTotal float64
+	DiskError error
+
+	Timestamp time.Time
 }
 
 func getAuthMethod(host inventory.Host) (ssh.AuthMethod, error) {
@@ -160,7 +165,6 @@ func getDiskUsage(client *ssh.Client) (used float64, total float64, err error) {
 	return usedDisk, totalDisk, nil
 }
 
-// TODO improve how errors are handled
 func getHostStats(host ConnectionInfo) HostStats {
 	stats := HostStats{
 		NameOfHost: host.InventoryInfo.Name,
@@ -170,24 +174,20 @@ func getHostStats(host ConnectionInfo) HostStats {
 
 	cpuUsage, err := getCPUUsage(host.connectionClient)
 	if err != nil {
-		stats.Error = err
-		return stats
+		stats.CPUError = err
 	}
 	stats.CPUUsage = cpuUsage
 
 	memUsed, memTotal, err := getMemoryUsage(host.connectionClient)
 	if err != nil {
-		stats.Error = err
-		return stats
+		stats.MemoryError = err
 	}
 	stats.MemoryUsage = memUsed
 	stats.MemoryTotal = memTotal
 
 	diskUsage, diskTotal, err := getDiskUsage(host.connectionClient)
 	if err != nil {
-		slog.Info(fmt.Sprintf("failed to get disk usage: %s", err))
-		stats.Error = err
-		return stats
+		stats.DiskError = err
 	}
 
 	stats.DiskUsage = diskUsage
