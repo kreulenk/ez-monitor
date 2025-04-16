@@ -69,8 +69,6 @@ func (m *Model) View() string {
 			bars[i] = overlayTextOnBar(m.width, fmt.Sprintf("%.1f %s", m.maxValue, m.unit), m.styles.BackGroundBar)
 		} else if i == m.height-valueBarHeight-1 {
 			bars[i] = overlayTextOnBar(m.width, fmt.Sprintf("%.1f %s", m.currentValue, m.unit), m.styles.BackGroundBar)
-		} else if i == m.height-1 {
-			bars[i] = overlayTextOnBar(m.width, fmt.Sprintf("%.1f %s", m.minValue, m.unit), m.styles.ValueBar)
 		} else if i < m.height-valueBarHeight {
 			bars[i] = m.styles.BackGroundBar.Render(strings.Repeat("█", m.width))
 		} else {
