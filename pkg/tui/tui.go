@@ -114,14 +114,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, listenForStats(m.ctx, m.statsChan)
 
 	case tea.WindowSizeMsg:
-		m.memBarChart.SetWidth(msg.Width / 3)
-		m.memBarChart.SetHeight(msg.Height - 1)
+		m.memBarChart.SetWidth(msg.Width/3 - 2)
+		m.memBarChart.SetHeight(msg.Height - 5)
 
-		m.cpuBarChart.SetWidth(msg.Width / 3)
-		m.cpuBarChart.SetHeight(msg.Height - 1)
+		m.cpuBarChart.SetWidth(msg.Width/3 - 2)
+		m.cpuBarChart.SetHeight(msg.Height - 5)
 
-		m.diskBarChart.SetWidth(msg.Width / 3)
-		m.diskBarChart.SetHeight(msg.Height - 1)
+		m.diskBarChart.SetWidth(msg.Width/3 - 2)
+		m.diskBarChart.SetHeight(msg.Height - 5)
 	}
 
 	return m, nil

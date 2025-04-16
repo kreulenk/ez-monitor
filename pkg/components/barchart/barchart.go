@@ -51,7 +51,7 @@ func (m *Model) SetWidth(v int) {
 }
 
 func (m *Model) SetHeight(v int) {
-	m.height = v - 2
+	m.height = v
 }
 
 func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
@@ -79,7 +79,8 @@ func (m *Model) View() string {
 	barView := lipgloss.JoinVertical(lipgloss.Top, bars...)
 	statNameView := lipgloss.NewStyle().MarginLeft(m.width/2 - 3).Render(m.statName)
 
-	return lipgloss.JoinVertical(lipgloss.Top, barView, statNameView)
+	graph := lipgloss.JoinVertical(lipgloss.Top, barView, statNameView)
+	return m.styles.Graph.Render(graph)
 }
 
 // overlayTextOnBar will take in a bar of a specific length and will overlay given text onto the

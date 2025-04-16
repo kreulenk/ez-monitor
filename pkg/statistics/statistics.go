@@ -205,6 +205,8 @@ func StartStatisticsCollection(ctx context.Context, inventoryInfo []inventory.Ho
 	statsChan := make(chan HostStats)
 	for _, host := range hosts {
 		go func(host ConnectionInfo, statsChan chan HostStats) {
+			stat := getHostStats(host)
+			statsChan <- stat
 			ticker := time.NewTicker(time.Second * 2)
 			for {
 				select {
