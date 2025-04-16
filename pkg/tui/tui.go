@@ -19,8 +19,9 @@ type Model struct {
 	ctx  context.Context
 	Help help.Model
 
-	memBarChart barchart.Model
-	cpuBarChart barchart.Model
+	memBarChart  barchart.Model
+	cpuBarChart  barchart.Model
+	diskBarChart barchart.Model
 
 	statsChan chan statistics.HostStats
 
@@ -51,8 +52,9 @@ func initialModel(ctx context.Context, inventoryInfo []inventory.Host, statsChan
 		ctx:  ctx,
 		Help: help.New(),
 
-		memBarChart: barchart.New("memory", "MB", 0, 0), // 0 max value as we do not yet know the max
-		cpuBarChart: barchart.New("cpu", "%", 0, 100),
+		memBarChart:  barchart.New("memory", "MB", 0, 0), // 0 max value as we do not yet know the max
+		cpuBarChart:  barchart.New("cpu", "%", 0, 100),
+		diskBarChart: barchart.New("disk", "MB", 0, 0), // 0 max value as we do not yet know the max
 
 		statsChan: statsChan,
 
@@ -93,12 +95,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.Next):
 			if m.currentIndex < len(m.inventoryNameToIndexMap)-1 {
 				m.currentIndex++
-				m.memBarChart = m.updateChildModelsWithLatestStats(m.statsCollector[m.inventoryIndexToNameMap[m.currentIndex]])
+				m.updateChildModelsWithLatestStats(m.statsCollector[m.inventoryIndexToNameMap[m.currentIndex]])
 			}
 		case key.Matches(msg, keys.Previous):
 			if m.currentIndex > 0 {
 				m.currentIndex--
-				m.memBarChart = m.updateChildModelsWithLatestStats(m.statsCollector[m.inventoryIndexToNameMap[m.currentIndex]])
+				m.updateChildModelsWithLatestStats(m.statsCollector[m.inventoryIndexToNameMap[m.currentIndex]])
 			}
 		}
 	case statsMsg:
@@ -106,17 +108,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// If the latest update came from the host we are on, update the charts with this data
 		if m.currentIndex == m.inventoryNameToIndexMap[msg.NameOfHost] {
-			m.memBarChart = m.updateChildModelsWithLatestStats(statistics.HostStats(msg))
+			m.updateChildModelsWithLatestStats(statistics.HostStats(msg))
 		}
 
 		return m, listenForStats(m.ctx, m.statsChan)
 
 	case tea.WindowSizeMsg:
-		m.memBarChart.SetWidth(msg.Width / 4)
+		m.memBarChart.SetWidth(msg.Width / 3)
 		m.memBarChart.SetHeight(msg.Height - 1)
 
-		m.cpuBarChart.SetWidth(msg.Width / 4)
+		m.cpuBarChart.SetWidth(msg.Width / 3)
 		m.cpuBarChart.SetHeight(msg.Height - 1)
+
+		m.diskBarChart.SetWidth(msg.Width / 3)
+		m.diskBarChart.SetHeight(msg.Height - 1)
 	}
 
 	return m, nil
@@ -127,7 +132,7 @@ func (m Model) View() string {
 	if _, ok := m.statsCollector[currentHost]; ok {
 		return lipgloss.JoinVertical(lipgloss.Left,
 			lipgloss.JoinVertical(lipgloss.Center, currentHost,
-				lipgloss.JoinHorizontal(lipgloss.Left, m.memBarChart.View(), m.cpuBarChart.View())),
+				lipgloss.JoinHorizontal(lipgloss.Left, m.memBarChart.View(), m.cpuBarChart.View(), m.diskBarChart.View())),
 			m.HelpView(),
 		)
 	} else {
@@ -139,9 +144,13 @@ func (m Model) View() string {
 	}
 }
 
-func (m Model) updateChildModelsWithLatestStats(stats statistics.HostStats) barchart.Model {
+func (m *Model) updateChildModelsWithLatestStats(stats statistics.HostStats) barchart.Model {
 	m.memBarChart.SetCurrentValue(stats.MemoryUsage)
 	m.memBarChart.SetMaxValue(stats.MemoryTotal)
+
+	m.diskBarChart.SetCurrentValue(stats.DiskUsage)
+	m.diskBarChart.SetMaxValue(stats.DiskTotal)
+
 	m.cpuBarChart.SetCurrentValue(stats.CPUUsage)
 	return m.memBarChart
 }

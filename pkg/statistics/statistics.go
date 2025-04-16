@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/mitchellh/go-homedir"
 	"golang.org/x/crypto/ssh"
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -18,6 +19,8 @@ type HostStats struct {
 	CPUUsage    float64
 	MemoryUsage float64
 	MemoryTotal float64
+	DiskUsage   float64
+	DiskTotal   float64
 	Error       error
 	Timestamp   time.Time
 }
@@ -133,6 +136,31 @@ func getMemoryUsage(client *ssh.Client) (used float64, total float64, err error)
 	return usedMem, totalMem, nil
 }
 
+func getDiskUsage(client *ssh.Client) (used float64, total float64, err error) {
+	command := "df -m --output=used,size / | tail -1"
+	output, err := executeCommand(client, command)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to execute command %s: %s", command, err)
+	}
+	fields := strings.Fields(output)
+	if len(fields) < 2 {
+		return 0, 0, fmt.Errorf("unexpected output format from df command to get disk usage: %s", output)
+	}
+
+	usedDisk, err := strconv.ParseFloat(fields[0], 64)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to parse used disk space: %s", err)
+	}
+
+	totalDisk, err := strconv.ParseFloat(fields[1], 64)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to parse total disk space: %s", err)
+	}
+
+	return usedDisk, totalDisk, nil
+}
+
+// TODO improve how errors are handled
 func getHostStats(host ConnectionInfo) HostStats {
 	stats := HostStats{
 		NameOfHost: host.InventoryInfo.Name,
@@ -154,6 +182,17 @@ func getHostStats(host ConnectionInfo) HostStats {
 	}
 	stats.MemoryUsage = memUsed
 	stats.MemoryTotal = memTotal
+
+	diskUsage, diskTotal, err := getDiskUsage(host.connectionClient)
+	if err != nil {
+		slog.Info(fmt.Sprintf("failed to get disk usage: %s", err))
+		stats.Error = err
+		return stats
+	}
+
+	stats.DiskUsage = diskUsage
+	stats.DiskTotal = diskTotal
+
 	return stats
 }
 
