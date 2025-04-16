@@ -29,7 +29,7 @@ jobs:
 
       - name: Build
         run: |
-          GOARCH=${{ matrix.goarch }} GOOS=${{ matrix.goos }} go build -o ez-monitor ./main.go
+          GOARCH=${{ matrix.goarch }} GOOS=${{ matrix.goos }} go build -ldflags "-X 'github.com/kreulenk/ez-monitor/internal/build.Version=${{ github.ref_name }}' -X 'github.com/kreulenk/ez-monitor/internal/build.SHA=$(git rev-parse HEAD)'" -o ez-monitor ./main.go
 
       - name: Archive build
         run: |
