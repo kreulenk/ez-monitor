@@ -1,0 +1,99 @@
+name: Release
+on:
+  release:
+    types:
+      - created
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        goarch: [amd64, arm64]
+        goos: [linux, darwin]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24'
+
+      - name: Build
+        run: |
+          GOARCH=${{ matrix.goarch }} GOOS=${{ matrix.goos }} go build -o ez-monitor ./main.go
+
+      - name: Archive build
+        run: |
+          tar -czvf ez-monitor-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz ez-monitor
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./ez-monitor-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
+          asset_name: ez-monitor-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
+          asset_content_type: application/gzip
+
+  homebrew:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout homebrew-brew repository
+        uses: actions/checkout@v4
+        with:
+          repository: kreulenk/homebrew-brew
+          token: ${{ secrets.BREW_PAT }}
+          ref: main
+
+      - name: Download Release Assets
+        run: |
+          curl -L -o ez-monitor-darwin-amd64.tar.gz https://github.com/kreulenk/ez-monitor/releases/download/${{ github.ref_name }}/ez-monitor-darwin-amd64.tar.gz
+          curl -L -o ez-monitor-darwin-arm64.tar.gz https://github.com/kreulenk/ez-monitor/releases/download/${{ github.ref_name }}/ez-monitor-darwin-arm64.tar.gz
+
+      - name: Update Homebrew formula
+        run: |
+          cat <<EOF > Formula/ez-monitor.rb
+          class EZMonitor < Formula
+            desc "A tool to easily monitor your infrastructure via ssh"
+            homepage "https://github.com/kreulenk/ez-monitor"
+            url "https://github.com/kreulenk/ez-monitor/releases/download/${{ github.ref_name }}/ez-monitor-darwin-amd64.tar.gz"
+            sha256 "$(shasum -a 256 ez-monitor-darwin-amd64.tar.gz | awk '{print $1}')"
+            version "${{ github.ref_name }}"
+
+            if Hardware::CPU.arm?
+              url "https://github.com/kreulenk/ez-monitor/releases/download/${{ github.ref_name }}/ez-monitor-darwin-arm64.tar.gz"
+              sha256 "$(shasum -a 256 ez-monitor-darwin-arm64.tar.gz | awk '{print $1}')"
+            end
+
+            def install
+              bin.install "ez-monitor"
+            end
+
+            test do
+              system "#{bin}/ez-monitor"
+            end
+          end
+          EOF
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin https://${{ secrets.BREW_PAT }}@github.com/kreulenk/homebrew-brew.git
+          git add Formula/ez-monitor.rb
+          git commit -m "Update homebrew to point to latest ez-monitor release"
+          git push origin main
+        env:
+          BREW_PAT_TOKEN: ${{ secrets.BREW_PAT }}
