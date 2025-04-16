@@ -15,12 +15,12 @@ See an example inventory file below
 ```ini
 [host-1]
 address=ubuntu-server-1
-username=kevinkreulen
+username=some-user
 ssh_private_key_file=~/.ssh/id_rsa
 
 [host-2]
 address=ubuntu-server-2
-username=kevinkreulen
+username=some-user
 password=lets-avoid-defining-passwords-in-plain-text-if-we-can-:)
 port=23
 ```
