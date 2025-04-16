@@ -34,7 +34,6 @@ func connectToHosts(inventoryInfo []inventory.Host) ([]ConnectionInfo, error) {
 		}(host)
 	}
 	wg.Wait()
-	wg.Wait()
 	close(errChan)
 	close(connChan)
 

@@ -31,6 +31,7 @@ func genRootCmd() *cobra.Command {
 			statsChan, err := statistics.StartStatisticsCollection(ctx, inventoryInfo)
 			if err != nil {
 				fmt.Println(err)
+				os.Exit(1)
 			}
 			tui.Initialize(ctx, inventoryInfo, statsChan)
 

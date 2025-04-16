@@ -11,7 +11,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
-	"log/slog"
 	"os"
 )
 
@@ -124,7 +123,6 @@ func (m Model) View() string {
 }
 
 func (m Model) updateChildModelsWithLatestStats(stats statistics.HostStats) barchart.Model {
-	slog.Info(fmt.Sprintf("index map %v", m.inventoryNameToIndexMap))
 	m.memBarChart.SetCurrentValue(stats.MemoryUsage)
 	m.memBarChart.SetMaxValue(stats.MemoryTotal)
 	return m.memBarChart
