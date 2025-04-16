@@ -124,11 +124,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) View() string {
 	currentHost := m.inventoryIndexToNameMap[m.currentIndex]
-	return lipgloss.JoinVertical(lipgloss.Left,
-		lipgloss.JoinVertical(lipgloss.Center, currentHost,
-			lipgloss.JoinHorizontal(lipgloss.Left, m.memBarChart.View(), m.cpuBarChart.View())),
-		m.HelpView(),
-	)
+	if _, ok := m.statsCollector[currentHost]; ok {
+		return lipgloss.JoinVertical(lipgloss.Left,
+			lipgloss.JoinVertical(lipgloss.Center, currentHost,
+				lipgloss.JoinHorizontal(lipgloss.Left, m.memBarChart.View(), m.cpuBarChart.View())),
+			m.HelpView(),
+		)
+	} else {
+		return lipgloss.JoinVertical(lipgloss.Left,
+			lipgloss.JoinVertical(lipgloss.Center, currentHost, "Waiting for stats to be available...",
+				m.HelpView(),
+			),
+		)
+	}
 }
 
 func (m Model) updateChildModelsWithLatestStats(stats statistics.HostStats) barchart.Model {
