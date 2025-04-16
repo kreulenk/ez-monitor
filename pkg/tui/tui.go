@@ -104,11 +104,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.statsCollector[msg.NameOfHost] = statistics.HostStats(msg)
 
 		// If the latest update came from the host we are on, update the charts with this data
-		slog.Info(fmt.Sprintf("index map %v", m.inventoryNameToIndexMap))
-		slog.Info(fmt.Sprintf("currentIndex %v", m.currentIndex))
-		slog.Info(fmt.Sprintf("found index %v", m.inventoryNameToIndexMap[msg.NameOfHost]))
 		if m.currentIndex == m.inventoryNameToIndexMap[msg.NameOfHost] {
-			slog.Info("in if statement")
 			m.memBarChart = m.updateChildModelsWithLatestStats(statistics.HostStats(msg))
 		}
 
