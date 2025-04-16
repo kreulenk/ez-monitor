@@ -65,7 +65,7 @@ jobs:
       - name: Update Homebrew formula
         run: |
           cat <<EOF > Formula/ez-monitor.rb
-          class EZMonitor < Formula
+          class EzMonitor < Formula
             desc "A tool to easily monitor your infrastructure via ssh"
             homepage "https://github.com/kreulenk/ez-monitor"
             url "https://github.com/kreulenk/ez-monitor/releases/download/${{ github.ref_name }}/ez-monitor-darwin-amd64.tar.gz"
