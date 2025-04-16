@@ -1,6 +1,7 @@
 package barchart
 
 import (
+	"ez-monitor/pkg/renderutils"
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -51,7 +52,7 @@ func (m *Model) SetWidth(v int) {
 }
 
 func (m *Model) SetHeight(v int) {
-	m.height = v
+	m.height = renderutils.Max(0, v)
 }
 
 func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
@@ -99,8 +100,8 @@ func overlayTextOnBar(barWidth int, text string, barStyle lipgloss.Style) string
 		textWidth = lipgloss.Width(text)
 	}
 
-	leftBarWidth := (barWidth - textWidth) / 2
-	rightBarWidth := barWidth - textWidth - leftBarWidth
+	leftBarWidth := renderutils.Max(0, (barWidth-textWidth)/2)
+	rightBarWidth := renderutils.Max(0, barWidth-textWidth-leftBarWidth)
 
 	leftBar := barStyle.Render(strings.Repeat("█", leftBarWidth))
 	rightBar := barStyle.Render(strings.Repeat("█", rightBarWidth))
