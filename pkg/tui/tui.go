@@ -8,9 +8,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/kreulenk/ez-monitor/pkg/components/barchart"
+	"github.com/kreulenk/ez-monitor/pkg/components/counter"
 	"github.com/kreulenk/ez-monitor/pkg/inventory"
 	"github.com/kreulenk/ez-monitor/pkg/statistics"
 	"github.com/muesli/termenv"
+	"log/slog"
 	"os"
 )
 
@@ -22,6 +24,9 @@ type Model struct {
 	memBarChart  barchart.Model
 	cpuBarChart  barchart.Model
 	diskBarChart barchart.Model
+
+	networkingSentChart     counter.Model
+	networkingReceivedChart counter.Model
 
 	statsChan chan statistics.HostStats
 
@@ -55,6 +60,9 @@ func initialModel(ctx context.Context, inventoryInfo []inventory.Host, statsChan
 		memBarChart:  barchart.New("memory", "MB", 0, 0), // 0 max value as we do not yet know the max
 		cpuBarChart:  barchart.New("cpu", "%", 0, 100),
 		diskBarChart: barchart.New("disk", "MB", 0, 0), // 0 max value as we do not yet know the max
+
+		networkingSentChart:     counter.New("Net Sent", "MB"),
+		networkingReceivedChart: counter.New("Net Recv", "MB"),
 
 		statsChan: statsChan,
 
@@ -114,14 +122,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, listenForStats(m.ctx, m.statsChan)
 
 	case tea.WindowSizeMsg:
-		m.memBarChart.SetWidth(msg.Width/3 - 2)
+		m.memBarChart.SetWidth(msg.Width/4 - 2)
 		m.memBarChart.SetHeight(msg.Height - 2)
 
-		m.cpuBarChart.SetWidth(msg.Width/3 - 2)
+		m.cpuBarChart.SetWidth(msg.Width/4 - 2)
 		m.cpuBarChart.SetHeight(msg.Height - 2)
 
-		m.diskBarChart.SetWidth(msg.Width/3 - 2)
+		m.diskBarChart.SetWidth(msg.Width/4 - 2)
 		m.diskBarChart.SetHeight(msg.Height - 2)
+
+		m.networkingSentChart.SetWidth(msg.Width/4 - 2)
+		m.networkingSentChart.SetHeight(msg.Height/2 - 2)
+
+		m.networkingReceivedChart.SetWidth(msg.Width/4 - 2)
+		m.networkingReceivedChart.SetHeight(msg.Height/2 - 2)
 	}
 
 	return m, nil
@@ -130,9 +144,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) View() string {
 	currentHost := m.inventoryIndexToNameMap[m.currentIndex]
 	if _, ok := m.statsCollector[currentHost]; ok {
+		networkingCounters := lipgloss.JoinVertical(lipgloss.Top, m.networkingSentChart.View(), m.networkingReceivedChart.View())
+
 		return lipgloss.JoinVertical(lipgloss.Left,
 			lipgloss.JoinVertical(lipgloss.Center, currentHost,
-				lipgloss.JoinHorizontal(lipgloss.Left, m.memBarChart.View(), m.cpuBarChart.View(), m.diskBarChart.View())),
+				lipgloss.JoinHorizontal(lipgloss.Left, m.memBarChart.View(), m.cpuBarChart.View(), m.diskBarChart.View(), networkingCounters)),
 			m.HelpView(),
 		)
 	} else {
@@ -145,6 +161,9 @@ func (m Model) View() string {
 }
 
 func (m *Model) updateChildModelsWithLatestStats(stats statistics.HostStats) {
+	slog.Info(fmt.Sprintf("Rec %.2f", stats.NetworkingMBReceived))
+	slog.Info(fmt.Sprintf("Sen %.2f", stats.NetworkingMBSent))
+
 	if stats.MemoryError == nil {
 		m.memBarChart.SetCurrentValue(stats.MemoryUsage)
 		m.memBarChart.SetMaxValue(stats.MemoryTotal)
@@ -162,5 +181,13 @@ func (m *Model) updateChildModelsWithLatestStats(stats statistics.HostStats) {
 		m.cpuBarChart.SetCurrentValue(stats.CPUUsage)
 	} else {
 		m.cpuBarChart.SetDataCollectionErr(stats.CPUError)
+	}
+
+	if stats.NetworkingError == nil {
+		m.networkingSentChart.SetCurrentValue(stats.NetworkingMBSent)
+		m.networkingReceivedChart.SetCurrentValue(stats.NetworkingMBReceived)
+	} else {
+		m.networkingSentChart.SetDataCollectionErr(stats.NetworkingError)
+		m.networkingReceivedChart.SetDataCollectionErr(stats.NetworkingError)
 	}
 }

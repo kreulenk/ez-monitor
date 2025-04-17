@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/kreulenk/ez-monitor/pkg/inventory"
-	"github.com/mitchellh/go-homedir"
 	"golang.org/x/crypto/ssh"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -27,72 +25,38 @@ type HostStats struct {
 	DiskTotal float64
 	DiskError error
 
+	NetworkingMBReceived float64
+	NetworkingMBSent     float64
+	NetworkingError      error
+
 	Timestamp time.Time
 }
 
-func getAuthMethod(host inventory.Host) (ssh.AuthMethod, error) {
-	if host.Password != "" {
-		return ssh.Password(host.Password), nil
-	}
-
-	if host.SshPrivateKeyFile != "" {
-		dir, err := homedir.Expand(host.SshPrivateKeyFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to expand SSH private key file %s: %s", host.SshPrivateKeyFile, err)
-		}
-
-		key, err := os.ReadFile(dir)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read SSH private key file %s: %s", dir, err)
-		}
-
-		signer, err := ssh.ParsePrivateKey(key)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse SSH private key file %s: %s", dir, err)
-		}
-		return ssh.PublicKeys(signer), nil
-	}
-	return nil, fmt.Errorf("either password or ssh_private_key_file must be specified for each host")
-}
-
-func connectToHost(host inventory.Host) (*ssh.Client, error) {
-	authMethod, err := getAuthMethod(host)
+func StartStatisticsCollection(ctx context.Context, inventoryInfo []inventory.Host) (chan HostStats, error) {
+	hosts, err := connectToHosts(inventoryInfo) // We close the connections when the context cancels in the loop below
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to connect to hosts: %s", err)
 	}
 
-	sshConfig := &ssh.ClientConfig{
-		User: host.Username,
-		Auth: []ssh.AuthMethod{
-			authMethod,
-		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // Probably switch to ssh.FixedHostKey or ssh.KnownHosts
-		Timeout:         time.Second * 10,
+	statsChan := make(chan HostStats)
+	for _, host := range hosts {
+		go func(host ConnectionInfo, statsChan chan HostStats) {
+			stat := getHostStats(host)
+			statsChan <- stat
+			ticker := time.NewTicker(time.Second * 2)
+			for {
+				select {
+				case <-ticker.C:
+					stat := getHostStats(host)
+					statsChan <- stat
+				case <-ctx.Done():
+					host.connectionClient.Close()
+					return
+				}
+			}
+		}(host, statsChan)
 	}
-	port := 22
-	if host.Port != 0 {
-		port = host.Port
-	}
-
-	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", host.Address, port), sshConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to %s: %s", host.Address, err)
-	}
-
-	return client, nil
-}
-
-func executeCommand(client *ssh.Client, command string) (string, error) {
-	session, err := client.NewSession()
-	if err != nil {
-		return "", fmt.Errorf("failed to create session: %s", err)
-	}
-	defer session.Close()
-	output, err := session.CombinedOutput(command)
-	if err != nil {
-		return "", fmt.Errorf("failed to execute command %s: %s", command, err)
-	}
-	return string(output), nil
+	return statsChan, nil
 }
 
 func getCPUUsage(client *ssh.Client) (float64, error) {
@@ -128,17 +92,17 @@ func getMemoryUsage(client *ssh.Client) (used float64, total float64, err error)
 		return 0, 0, fmt.Errorf("unexpected output format from free command to get memory usage: %s", output)
 	}
 
-	totalMem, err := strconv.ParseFloat(fields[1], 64)
+	total, err = strconv.ParseFloat(fields[1], 64)
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to parse total memory usage: %s", err)
 	}
 
-	usedMem, err := strconv.ParseFloat(fields[2], 64)
+	used, err = strconv.ParseFloat(fields[2], 64)
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to parse used memory usage: %s", err)
 	}
 
-	return usedMem, totalMem, nil
+	return used, total, nil
 }
 
 func getDiskUsage(client *ssh.Client) (used float64, total float64, err error) {
@@ -152,17 +116,41 @@ func getDiskUsage(client *ssh.Client) (used float64, total float64, err error) {
 		return 0, 0, fmt.Errorf("unexpected output format from df command to get disk usage: %s", output)
 	}
 
-	usedDisk, err := strconv.ParseFloat(fields[0], 64)
+	used, err = strconv.ParseFloat(fields[0], 64)
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to parse used disk space: %s", err)
 	}
 
-	totalDisk, err := strconv.ParseFloat(fields[1], 64)
+	total, err = strconv.ParseFloat(fields[1], 64)
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to parse total disk space: %s", err)
 	}
 
-	return usedDisk, totalDisk, nil
+	return used, total, nil
+}
+
+func getNetworkingUsage(client *ssh.Client) (sent float64, received float64, err error) {
+	command := "ip -s link show | awk '/^[0-9]+: / {iface=$2} iface!=\"lo:\" && $1 ~ /^[0-9]+$/ {rx+=$1; getline; tx+=$1} END {print rx, tx}'"
+	output, err := executeCommand(client, command)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to execute command %s: %s", command, err)
+	}
+	fields := strings.Fields(output)
+	if len(fields) < 2 {
+		return 0, 0, fmt.Errorf("unexpected output format from df command to get disk usage: %s", output)
+	}
+
+	received, err = strconv.ParseFloat(fields[0], 64)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to parse networking received MB: %s", err)
+	}
+
+	sent, err = strconv.ParseFloat(fields[1], 64)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to parse networking sent MB: %s", err)
+	}
+
+	return sent / 1024 / 1024, received / 1024 / 1024, nil
 }
 
 func getHostStats(host ConnectionInfo) HostStats {
@@ -193,32 +181,25 @@ func getHostStats(host ConnectionInfo) HostStats {
 	stats.DiskUsage = diskUsage
 	stats.DiskTotal = diskTotal
 
+	networkingSent, networkingReceived, err := getNetworkingUsage(host.connectionClient)
+	if err != nil {
+		stats.NetworkingError = err
+	}
+	stats.NetworkingMBSent = networkingSent
+	stats.NetworkingMBReceived = networkingReceived
+
 	return stats
 }
 
-func StartStatisticsCollection(ctx context.Context, inventoryInfo []inventory.Host) (chan HostStats, error) {
-	hosts, err := connectToHosts(inventoryInfo) // We close the connections when the context cancels in the loop below
+func executeCommand(client *ssh.Client, command string) (string, error) {
+	session, err := client.NewSession()
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to hosts: %s", err)
+		return "", fmt.Errorf("failed to create session: %s", err)
 	}
-
-	statsChan := make(chan HostStats)
-	for _, host := range hosts {
-		go func(host ConnectionInfo, statsChan chan HostStats) {
-			stat := getHostStats(host)
-			statsChan <- stat
-			ticker := time.NewTicker(time.Second * 2)
-			for {
-				select {
-				case <-ticker.C:
-					stat := getHostStats(host)
-					statsChan <- stat
-				case <-ctx.Done():
-					host.connectionClient.Close()
-					return
-				}
-			}
-		}(host, statsChan)
+	defer session.Close()
+	output, err := session.CombinedOutput(command)
+	if err != nil {
+		return "", fmt.Errorf("failed to execute command %s: %s", command, err)
 	}
-	return statsChan, nil
+	return string(output), nil
 }
