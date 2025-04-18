@@ -75,7 +75,7 @@ func (m *Model) View() string {
 		Render(currentValue)
 	currentValueWithCenteredPadding := lipgloss.NewStyle().
 		PaddingBottom(totalHeightOfBar - lipgloss.Height(currentValueWithTopPadding) + 1).
-		Background(lipgloss.Color("38")).
+		Background(lipgloss.Color("36")).
 		Render(currentValueWithTopPadding)
 
 	counter := lipgloss.JoinVertical(lipgloss.Top, currentValueWithCenteredPadding, statNameView)

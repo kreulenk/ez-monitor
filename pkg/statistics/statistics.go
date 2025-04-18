@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-type HostStats struct {
+type HostStat struct {
 	NameOfHost string // The term hostname makes naming this field difficult...
 	Address    string
 
@@ -32,15 +32,15 @@ type HostStats struct {
 	Timestamp time.Time
 }
 
-func StartStatisticsCollection(ctx context.Context, inventoryInfo []inventory.Host) (chan HostStats, error) {
+func StartStatisticsCollection(ctx context.Context, inventoryInfo []inventory.Host) (chan *HostStat, error) {
 	hosts, err := connectToHosts(inventoryInfo) // We close the connections when the context cancels in the loop below
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to hosts: %s", err)
 	}
 
-	statsChan := make(chan HostStats)
+	statsChan := make(chan *HostStat)
 	for _, host := range hosts {
-		go func(host ConnectionInfo, statsChan chan HostStats) {
+		go func(host ConnectionInfo, statsChan chan *HostStat) {
 			stat := getHostStats(host)
 			statsChan <- stat
 			ticker := time.NewTicker(time.Second * 2)
@@ -153,8 +153,8 @@ func getNetworkingUsage(client *ssh.Client) (sent float64, received float64, err
 	return sent / 1024 / 1024, received / 1024 / 1024, nil
 }
 
-func getHostStats(host ConnectionInfo) HostStats {
-	stats := HostStats{
+func getHostStats(host ConnectionInfo) *HostStat {
+	stats := &HostStat{
 		NameOfHost: host.InventoryInfo.Name,
 		Address:    host.InventoryInfo.Address,
 		Timestamp:  time.Now(),
