@@ -10,6 +10,11 @@ import (
 	"time"
 )
 
+type HistoricalDataPoint struct {
+	Data      float64
+	Timestamp time.Time
+}
+
 type HostStat struct {
 	NameOfHost string // The term hostname makes naming this field difficult...
 	Address    string

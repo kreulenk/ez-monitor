@@ -4,6 +4,7 @@ import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/kreulenk/ez-monitor/pkg/renderutils"
+	"github.com/kreulenk/ez-monitor/pkg/statistics"
 )
 
 type Model struct {
@@ -12,7 +13,7 @@ type Model struct {
 
 	minValue float64
 	maxValue float64
-	allStats []float64
+	allStats []statistics.HistoricalDataPoint
 	width    int
 	height   int
 
@@ -34,7 +35,7 @@ func (m *Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m *Model) SetAllStats(v []float64) {
+func (m *Model) SetAllStats(v []statistics.HistoricalDataPoint) {
 	m.allStats = v
 	m.dataCollectionErr = nil
 }
@@ -60,5 +61,30 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 }
 
 func (m *Model) View() string {
-	return fmt.Sprintf("%v", len(m.allStats))
+	if m.dataCollectionErr != nil {
+		return fmt.Sprintf("Error: %v", m.dataCollectionErr)
+	}
+
+	// Normalize data points to fit within the graph's height
+	graph := make([][]rune, m.height)
+	for i := range graph {
+		graph[i] = make([]rune, len(m.allStats))
+		for j := range graph[i] {
+			graph[i][j] = ' ' // Initialize with empty space
+		}
+	}
+
+	for i, point := range m.allStats {
+		normalizedValue := int((point.Data - m.minValue) / (m.maxValue - m.minValue) * float64(m.height-1))
+		normalizedValue = renderutils.Max(0, renderutils.Min(normalizedValue, m.height-1))
+		graph[m.height-1-normalizedValue][i] = '█' // Plot the point
+	}
+
+	// Build the graph as a string
+	var result string
+	for _, row := range graph {
+		result += string(row) + "\n"
+	}
+
+	return result
 }

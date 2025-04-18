@@ -129,13 +129,13 @@ func (m *Model) updateLiveChildModelStats(stats *statistics.HostStat) {
 	}
 }
 
-// TODO investigate caching this data or restructing how we store the data
-func (m Model) getAllCPUDataPoints() []float64 {
+// TODO investigate caching this data or restructuring how we store the data
+func (m Model) getAllCPUDataPoints() []statistics.HistoricalDataPoint {
 	currentHostStats := m.statsCollector[m.inventoryIndexToNameMap[m.currentIndex]]
-	cpuStats := make([]float64, 0, len(currentHostStats))
+	cpuStats := make([]statistics.HistoricalDataPoint, 0, len(currentHostStats))
 	if len(currentHostStats) > 0 {
 		for _, hostStat := range currentHostStats {
-			cpuStats = append(cpuStats, hostStat.CPUUsage)
+			cpuStats = append(cpuStats, statistics.HistoricalDataPoint{Data: hostStat.CPUUsage, Timestamp: hostStat.Timestamp})
 		}
 		return cpuStats
 	}
