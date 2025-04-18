@@ -9,10 +9,18 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/kreulenk/ez-monitor/pkg/components/barchart"
 	"github.com/kreulenk/ez-monitor/pkg/components/counter"
+	"github.com/kreulenk/ez-monitor/pkg/components/linegraph"
 	"github.com/kreulenk/ez-monitor/pkg/inventory"
 	"github.com/kreulenk/ez-monitor/pkg/statistics"
 	"github.com/muesli/termenv"
 	"os"
+)
+
+type ActiveView int
+
+const (
+	LiveData ActiveView = iota
+	HistoricalData
 )
 
 // Model implements tea.Model, and manages the browser UI.
@@ -22,12 +30,17 @@ type Model struct {
 
 	height int
 
-	memBarChart  barchart.Model
-	cpuBarChart  barchart.Model
-	diskBarChart barchart.Model
+	activeView ActiveView
 
+	// Live data
+	memBarChart             barchart.Model
+	cpuBarChart             barchart.Model
+	diskBarChart            barchart.Model
 	networkingSentChart     counter.Model
 	networkingReceivedChart counter.Model
+
+	// Historical data
+	cpuLineGraph linegraph.Model
 
 	statsChan chan statistics.HostStats
 
@@ -58,12 +71,17 @@ func initialModel(ctx context.Context, inventoryInfo []inventory.Host, statsChan
 		ctx:  ctx,
 		Help: help.New(),
 
-		memBarChart:  barchart.New("memory", "MB", 0, 0), // 0 max value as we do not yet know the max
-		cpuBarChart:  barchart.New("cpu", "%", 0, 100),
-		diskBarChart: barchart.New("disk", "MB", 0, 0), // 0 max value as we do not yet know the max
+		activeView: LiveData,
 
+		// Live data charts
+		memBarChart:             barchart.New("memory", "MB", 0, 0), // 0 max value as we do not yet know the max
+		cpuBarChart:             barchart.New("cpu", "%", 0, 100),
+		diskBarChart:            barchart.New("disk", "MB", 0, 0), // 0 max value as we do not yet know the max
 		networkingSentChart:     counter.New("Net Sent", "MB"),
 		networkingReceivedChart: counter.New("Net Recv", "MB"),
+
+		// Historical data charts
+		cpuLineGraph: linegraph.New("cpu", "%", 0, 100),
 
 		statsChan: statsChan,
 
@@ -111,6 +129,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.currentIndex--
 				m.updateChildModelsWithLatestStats(m.statsCollector[m.inventoryIndexToNameMap[m.currentIndex]])
 			}
+		case key.Matches(msg, keys.HistoricalView):
+			m.activeView = HistoricalData
+		case key.Matches(msg, keys.LiveView):
+			m.activeView = LiveData
 		}
 	case statsMsg:
 		m.statsCollector[msg.NameOfHost] = statistics.HostStats(msg)
@@ -147,13 +169,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) View() string {
 	currentHost := m.inventoryIndexToNameMap[m.currentIndex]
 	if _, ok := m.statsCollector[currentHost]; ok {
-		networkingCounters := joinVerticalStackedElementsWithBuffers(m.networkingSentChart.View(), m.networkingReceivedChart.View(), m.height)
-
-		return lipgloss.JoinVertical(lipgloss.Left,
-			lipgloss.JoinVertical(lipgloss.Center, currentHost,
-				lipgloss.JoinHorizontal(lipgloss.Left, m.memBarChart.View(), m.cpuBarChart.View(), m.diskBarChart.View(), networkingCounters)),
-			m.HelpView(),
-		)
+		if m.activeView == LiveData {
+			return m.renderLiveDataView(currentHost)
+		} else {
+			return m.renderHistoricalDataView(currentHost)
+		}
 	} else {
 		return lipgloss.JoinVertical(lipgloss.Left,
 			lipgloss.JoinVertical(lipgloss.Center, currentHost, "Waiting for stats to be available...",
@@ -161,6 +181,20 @@ func (m Model) View() string {
 			),
 		)
 	}
+}
+
+func (m Model) renderLiveDataView(currentHost string) string {
+	networkingCounters := joinVerticalStackedElementsWithBuffers(m.networkingSentChart.View(), m.networkingReceivedChart.View(), m.height)
+
+	return lipgloss.JoinVertical(lipgloss.Left,
+		lipgloss.JoinVertical(lipgloss.Center, currentHost,
+			lipgloss.JoinHorizontal(lipgloss.Left, m.memBarChart.View(), m.cpuBarChart.View(), m.diskBarChart.View(), networkingCounters)),
+		m.HelpView(),
+	)
+}
+
+func (m Model) renderHistoricalDataView(currentHost string) string {
+	return lipgloss.JoinVertical(lipgloss.Top, m.cpuLineGraph.View(), m.HelpView())
 }
 
 func (m *Model) updateChildModelsWithLatestStats(stats statistics.HostStats) {
