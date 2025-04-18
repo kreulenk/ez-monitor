@@ -12,7 +12,6 @@ import (
 	"github.com/kreulenk/ez-monitor/pkg/inventory"
 	"github.com/kreulenk/ez-monitor/pkg/statistics"
 	"github.com/muesli/termenv"
-	"log/slog"
 	"os"
 )
 
@@ -20,6 +19,8 @@ import (
 type Model struct {
 	ctx  context.Context
 	Help help.Model
+
+	height int
 
 	memBarChart  barchart.Model
 	cpuBarChart  barchart.Model
@@ -122,6 +123,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, listenForStats(m.ctx, m.statsChan)
 
 	case tea.WindowSizeMsg:
+		m.height = msg.Height
+
 		m.memBarChart.SetWidth(msg.Width/4 - 2)
 		m.memBarChart.SetHeight(msg.Height - 2)
 
@@ -144,7 +147,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) View() string {
 	currentHost := m.inventoryIndexToNameMap[m.currentIndex]
 	if _, ok := m.statsCollector[currentHost]; ok {
-		networkingCounters := lipgloss.JoinVertical(lipgloss.Top, m.networkingSentChart.View(), m.networkingReceivedChart.View())
+		networkingCounters := joinVerticalStackedElementsWithBuffers(m.networkingSentChart.View(), m.networkingReceivedChart.View(), m.height)
 
 		return lipgloss.JoinVertical(lipgloss.Left,
 			lipgloss.JoinVertical(lipgloss.Center, currentHost,
@@ -161,9 +164,6 @@ func (m Model) View() string {
 }
 
 func (m *Model) updateChildModelsWithLatestStats(stats statistics.HostStats) {
-	slog.Info(fmt.Sprintf("Rec %.2f", stats.NetworkingMBReceived))
-	slog.Info(fmt.Sprintf("Sen %.2f", stats.NetworkingMBSent))
-
 	if stats.MemoryError == nil {
 		m.memBarChart.SetCurrentValue(stats.MemoryUsage)
 		m.memBarChart.SetMaxValue(stats.MemoryTotal)
@@ -190,4 +190,14 @@ func (m *Model) updateChildModelsWithLatestStats(stats statistics.HostStats) {
 		m.networkingSentChart.SetDataCollectionErr(stats.NetworkingError)
 		m.networkingReceivedChart.SetDataCollectionErr(stats.NetworkingError)
 	}
+}
+
+// joinVerticalStackedElementsWithBuffers will ensure that vertically stacked elements have the proper
+// amount of buffer between them so that they are always the same height as other display elements
+// TODO fix how height is calculated throughout the app as this algorithm is questionable at best...
+func joinVerticalStackedElementsWithBuffers(element1, element2 string, height int) string {
+	if height%2 != 0 {
+		element2 = lipgloss.NewStyle().MarginTop(1).Render(element2)
+	}
+	return lipgloss.JoinVertical(lipgloss.Top, element1, element2)
 }

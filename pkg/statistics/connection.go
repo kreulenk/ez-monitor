@@ -12,8 +12,9 @@ import (
 )
 
 type ConnectionInfo struct {
-	InventoryInfo    inventory.Host
-	connectionClient *ssh.Client
+	InventoryInfo     inventory.Host
+	connectionClient  *ssh.Client
+	connectionSession *ssh.Session
 }
 
 func connectToHosts(inventoryInfo []inventory.Host) ([]ConnectionInfo, error) {
@@ -26,14 +27,15 @@ func connectToHosts(inventoryInfo []inventory.Host) ([]ConnectionInfo, error) {
 		wg.Add(1)
 		go func(host inventory.Host) {
 			defer wg.Done()
-			client, err := connectToHost(host)
+			client, session, err := connectToHost(host)
 			if err != nil {
 				errChan <- err
 				return
 			}
 			connChan <- ConnectionInfo{
-				InventoryInfo:    host,
-				connectionClient: client,
+				InventoryInfo:     host,
+				connectionClient:  client,
+				connectionSession: session,
 			}
 		}(host)
 	}
@@ -82,10 +84,10 @@ func getAuthMethod(host inventory.Host) (ssh.AuthMethod, error) {
 	return nil, fmt.Errorf("either password or ssh_private_key_file must be specified for each host")
 }
 
-func connectToHost(host inventory.Host) (*ssh.Client, error) {
+func connectToHost(host inventory.Host) (*ssh.Client, *ssh.Session, error) {
 	authMethod, err := getAuthMethod(host)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	sshConfig := &ssh.ClientConfig{
@@ -103,8 +105,14 @@ func connectToHost(host inventory.Host) (*ssh.Client, error) {
 
 	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", host.Address, port), sshConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to %s: %s", host.Address, err)
+		return nil, nil, fmt.Errorf("failed to connect to %s: %s", host.Address, err)
 	}
 
-	return client, nil
+	session, err := client.NewSession()
+	if err != nil {
+		client.Close()
+		return nil, nil, fmt.Errorf("failed to open session on %s: %s", host.Address, err)
+	}
+
+	return client, session, nil
 }

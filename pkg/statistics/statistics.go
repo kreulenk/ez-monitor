@@ -160,33 +160,10 @@ func getHostStats(host ConnectionInfo) HostStats {
 		Timestamp:  time.Now(),
 	}
 
-	cpuUsage, err := getCPUUsage(host.connectionClient)
-	if err != nil {
-		stats.CPUError = err
-	}
-	stats.CPUUsage = cpuUsage
-
-	memUsed, memTotal, err := getMemoryUsage(host.connectionClient)
-	if err != nil {
-		stats.MemoryError = err
-	}
-	stats.MemoryUsage = memUsed
-	stats.MemoryTotal = memTotal
-
-	diskUsage, diskTotal, err := getDiskUsage(host.connectionClient)
-	if err != nil {
-		stats.DiskError = err
-	}
-
-	stats.DiskUsage = diskUsage
-	stats.DiskTotal = diskTotal
-
-	networkingSent, networkingReceived, err := getNetworkingUsage(host.connectionClient)
-	if err != nil {
-		stats.NetworkingError = err
-	}
-	stats.NetworkingMBSent = networkingSent
-	stats.NetworkingMBReceived = networkingReceived
+	stats.CPUUsage, stats.CPUError = getCPUUsage(host.connectionClient)
+	stats.MemoryUsage, stats.MemoryTotal, stats.MemoryError = getMemoryUsage(host.connectionClient)
+	stats.DiskUsage, stats.DiskTotal, stats.DiskError = getDiskUsage(host.connectionClient)
+	stats.NetworkingMBSent, stats.NetworkingMBReceived, stats.NetworkingError = getNetworkingUsage(host.connectionClient)
 
 	return stats
 }

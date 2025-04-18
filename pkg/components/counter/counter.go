@@ -60,7 +60,7 @@ func (m *Model) View() string {
 
 	if m.dataCollectionErr != nil {
 		errText := lipgloss.NewStyle().Width(m.width - 2).AlignHorizontal(lipgloss.Center).Render(m.dataCollectionErr.Error())
-		errText = lipgloss.NewStyle().PaddingBottom(totalHeightOfBar - lipgloss.Height(errText)).Render(errText) // Add padding so the label is at the bottom
+		errText = lipgloss.NewStyle().PaddingBottom(totalHeightOfBar - lipgloss.Height(errText) + 1).Render(errText) // Add padding so the label is at the bottom
 
 		text := lipgloss.JoinVertical(lipgloss.Center, errText, statNameView)
 		return m.styles.Counter.Width(m.width - 2).Height(totalHeightOfBar).Render(text)
@@ -69,12 +69,15 @@ func (m *Model) View() string {
 	currentValue := lipgloss.NewStyle().
 		Width(m.width - 2).
 		AlignHorizontal(lipgloss.Center).
-		Background(lipgloss.Color("38")).
 		Render(fmt.Sprintf("%.2f%s", m.currentValue, m.unit))
-	currentValueWithPadding := lipgloss.NewStyle().
-		PaddingBottom(totalHeightOfBar - lipgloss.Height(currentValue) + 1).
+	currentValueWithTopPadding := lipgloss.NewStyle().
+		PaddingTop((totalHeightOfBar - lipgloss.Height(currentValue)) / 2).
 		Render(currentValue)
+	currentValueWithCenteredPadding := lipgloss.NewStyle().
+		PaddingBottom(totalHeightOfBar - lipgloss.Height(currentValueWithTopPadding) + 1).
+		Background(lipgloss.Color("38")).
+		Render(currentValueWithTopPadding)
 
-	counter := lipgloss.JoinVertical(lipgloss.Top, currentValueWithPadding, statNameView)
+	counter := lipgloss.JoinVertical(lipgloss.Top, currentValueWithCenteredPadding, statNameView)
 	return m.styles.Counter.Render(counter)
 }

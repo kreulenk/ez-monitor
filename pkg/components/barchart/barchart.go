@@ -68,7 +68,7 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 
 func (m *Model) View() string {
 	statNameView := lipgloss.NewStyle().Width(m.width - 2).AlignHorizontal(lipgloss.Center).Render(m.statName)
-	totalHeightOfBar := m.height - 3 // 2 for border and 1 for label
+	totalHeightOfBar := renderutils.Max(0, m.height-3) // 2 for border and 1 for label
 
 	if m.dataCollectionErr != nil {
 		errText := lipgloss.NewStyle().Width(m.width - 2).AlignHorizontal(lipgloss.Center).Render(m.dataCollectionErr.Error())
