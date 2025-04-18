@@ -1,6 +1,7 @@
 package linegraph
 
 import (
+	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/kreulenk/ez-monitor/pkg/renderutils"
 )
@@ -9,11 +10,11 @@ type Model struct {
 	statName string
 	unit     string
 
-	minValue     float64
-	maxValue     float64
-	currentValue float64
-	width        int
-	height       int
+	minValue float64
+	maxValue float64
+	allStats []float64
+	width    int
+	height   int
 
 	dataCollectionErr error
 }
@@ -33,8 +34,8 @@ func (m *Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m *Model) SetCurrentValue(v float64) {
-	m.currentValue = v
+func (m *Model) SetAllStats(v []float64) {
+	m.allStats = v
 	m.dataCollectionErr = nil
 }
 
@@ -59,5 +60,5 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 }
 
 func (m *Model) View() string {
-	return "linegraph toto"
+	return fmt.Sprintf("%v", len(m.allStats))
 }

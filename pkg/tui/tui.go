@@ -122,12 +122,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.Next):
 			if m.currentIndex < len(m.inventoryNameToIndexMap)-1 {
 				m.currentIndex++
-				m.updateChildModelsWithLatestStats(m.getLastDataPoint())
+				m.updateActiveCharts()
 			}
 		case key.Matches(msg, keys.Previous):
 			if m.currentIndex > 0 {
 				m.currentIndex--
-				m.updateChildModelsWithLatestStats(m.getLastDataPoint())
+				m.updateActiveCharts()
 			}
 		case key.Matches(msg, keys.HistoricalView):
 			m.activeView = HistoricalData
@@ -144,14 +144,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// If the latest update came from the host we are on, update the charts with this data
 		if m.currentIndex == m.inventoryNameToIndexMap[msg.NameOfHost] {
-			m.updateChildModelsWithLatestStats(msg)
+			m.updateActiveCharts()
 		}
 
 		return m, listenForStats(m.ctx, m.statsChan)
-
 	case tea.WindowSizeMsg:
 		m.height = msg.Height
 
+		// TODO we should probably use an interface to set these values at this point..
 		m.memBarChart.SetWidth(msg.Width/4 - 2)
 		m.memBarChart.SetHeight(msg.Height - 2)
 
@@ -166,9 +166,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		m.networkingReceivedChart.SetWidth(msg.Width/4 - 2)
 		m.networkingReceivedChart.SetHeight(msg.Height/2 - 2)
+
+		m.cpuLineGraph.SetWidth(msg.Width)
+		m.cpuLineGraph.SetHeight(msg.Height - 2)
 	}
 
 	return m, nil
+}
+
+// TODO investigate caching this data or restructing how we store the data
+func (m Model) getAllCPUDataPoints() []float64 {
+	currentHostStats := m.statsCollector[m.inventoryIndexToNameMap[m.currentIndex]]
+	cpuStats := make([]float64, 0, len(currentHostStats))
+	if len(currentHostStats) > 0 {
+		for _, hostStat := range currentHostStats {
+			cpuStats = append(cpuStats, hostStat.CPUUsage)
+		}
+		return cpuStats
+	}
+	return nil
 }
 
 func (m Model) getLastDataPoint() *statistics.HostStat {
@@ -210,11 +226,23 @@ func (m Model) renderHistoricalDataView(currentHost string) string {
 	return lipgloss.JoinVertical(lipgloss.Top, m.cpuLineGraph.View(), m.HelpView())
 }
 
-func (m *Model) updateChildModelsWithLatestStats(stats *statistics.HostStat) {
-	if stats == nil {
+func (m *Model) updateActiveCharts() {
+	lastStat := m.getLastDataPoint()
+	if lastStat == nil {
 		return
 	}
+	if m.activeView == LiveData {
+		m.updateLiveChildModelStats(lastStat)
+	} else {
+		if lastStat.CPUError == nil {
+			m.cpuLineGraph.SetAllStats(m.getAllCPUDataPoints())
+		} else {
+			m.cpuLineGraph.SetDataCollectionErr(lastStat.CPUError)
+		}
+	}
+}
 
+func (m *Model) updateLiveChildModelStats(stats *statistics.HostStat) {
 	if stats.MemoryError == nil {
 		m.memBarChart.SetCurrentValue(stats.MemoryUsage)
 		m.memBarChart.SetMaxValue(stats.MemoryTotal)
