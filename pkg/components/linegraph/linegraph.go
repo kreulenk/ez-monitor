@@ -77,26 +77,28 @@ func (m *Model) View() string {
 	// 5. Iterate over all the data and place it into a slice of the length of dataPointsPerBucket where you take an average per number data points per bucket
 	// Also normalize the value per the height = (avg_of_values_in_buckets - m.minValue) / (m.mavValue - m.minValue) * (m.height - 1)
 	// Graph the new slice
+	slog.Info(fmt.Sprintf("all the stats collected%v", m.allStats))
 
 	smallestTimestamp := m.allStats[0].Timestamp
 	largestTimestamp := m.allStats[len(m.allStats)-1].Timestamp
 	numBuckets := renderutils.Max(m.width, renderutils.Max(1, int(largestTimestamp.Unix()-smallestTimestamp.Unix())/m.width))
-	dataPointsPerBucket := len(m.allStats) / numBuckets
+	millisecondsPerBucket := int(largestTimestamp.Sub(smallestTimestamp).Milliseconds()) / numBuckets
 	buckets := make([]float64, numBuckets)
 
 	numBucketsWithActualData := renderutils.Min(len(buckets), len(m.allStats))
-	allStatsIndex := 0
-	for i := 0; i < numBucketsWithActualData; i++ {
+	for allStatsIndex, bucketIndex := 0, 0; allStatsIndex < numBucketsWithActualData; bucketIndex++ {
 		var sum float64
-		for j := 0; j <= dataPointsPerBucket; j++ { // TODO fix this code to actual use timestamp size for bucket size
-
-			slog.Info(fmt.Sprintf("An actual data point", j, m.allStats[allStatsIndex].Timestamp))
+		dataPointsInBucket := 0
+		for j := 0; j <= millisecondsPerBucket*bucketIndex && allStatsIndex < len(m.allStats); j++ {
 			sum += m.allStats[allStatsIndex].Data
 			allStatsIndex++
+			dataPointsInBucket++
 		}
-		avg := sum / float64(dataPointsPerBucket)
+		avg := sum / float64(dataPointsInBucket)
+		slog.Info(fmt.Sprintf("data before normalization %v", avg))
 		normalizedValue := (avg - m.minValue) / (m.maxValue - m.minValue) * float64(m.height-1)
 		normalizedValue = math.Max(0, math.Min(normalizedValue, float64(m.height-1)))
+		slog.Info(fmt.Sprintf("data after normalization %v", avg))
 		buckets = append(buckets, normalizedValue)
 	}
 
@@ -114,7 +116,7 @@ func (m *Model) View() string {
 			break
 		}
 		slog.Info(fmt.Sprintf("bucket %v %v", i, point))
-		//slog.Info(fmt.Sprintf("Bucket %d: %v", i, point))
+		//slog.Info(fmt.Sprintf("Bucket %d: %v", allStatsIndex, point))
 		graph[m.height-1-int(point)][i] = '█' // Plot the point
 	}
 
