@@ -7,6 +7,7 @@ import (
 	"github.com/kreulenk/ez-monitor/pkg/statistics"
 	"log/slog"
 	"math"
+	"time"
 )
 
 type Model struct {
@@ -82,25 +83,31 @@ func (m *Model) View() string {
 	smallestTimestamp := m.allStats[0].Timestamp
 	largestTimestamp := m.allStats[len(m.allStats)-1].Timestamp
 	numBuckets := renderutils.Max(m.width, renderutils.Max(1, int(largestTimestamp.Unix()-smallestTimestamp.Unix())/m.width))
-	millisecondsPerBucket := int(largestTimestamp.Sub(smallestTimestamp).Milliseconds()) / numBuckets
-	buckets := make([]float64, numBuckets)
+	durationPerBucket := largestTimestamp.Sub(smallestTimestamp) / time.Duration(numBuckets)
+	var buckets []float64
 
-	numBucketsWithActualData := renderutils.Min(len(buckets), len(m.allStats))
+	numBucketsWithActualData := renderutils.Min(numBuckets, len(m.allStats))
 	for allStatsIndex, bucketIndex := 0, 0; allStatsIndex < numBucketsWithActualData; bucketIndex++ {
 		var sum float64
+		if allStatsIndex >= len(m.allStats) {
+			break
+		}
+
+		maxTimestampInBucket := smallestTimestamp.Add(durationPerBucket * time.Duration(bucketIndex))
 		dataPointsInBucket := 0
-		for j := 0; j <= millisecondsPerBucket*bucketIndex && allStatsIndex < len(m.allStats); j++ {
+		for ; allStatsIndex < len(m.allStats) && maxTimestampInBucket.Sub(m.allStats[allStatsIndex].Timestamp) > 0; allStatsIndex++ {
 			sum += m.allStats[allStatsIndex].Data
-			allStatsIndex++
 			dataPointsInBucket++
 		}
+		//slog.Info(fmt.Sprintf("sum of allStats %v dataPointsInBucket %v", sum, dataPointsInBucket))
 		avg := sum / float64(dataPointsInBucket)
-		slog.Info(fmt.Sprintf("data before normalization %v", avg))
+		//slog.Info(fmt.Sprintf("data before normalization %v", avg))
 		normalizedValue := (avg - m.minValue) / (m.maxValue - m.minValue) * float64(m.height-1)
 		normalizedValue = math.Max(0, math.Min(normalizedValue, float64(m.height-1)))
-		slog.Info(fmt.Sprintf("data after normalization %v", avg))
+		//slog.Info(fmt.Sprintf("data after normalization %v", normalizedValue))
 		buckets = append(buckets, normalizedValue)
 	}
+	slog.Info(fmt.Sprintf("buckets %v", buckets))
 
 	// Normalize data points to fit within the graph's height
 	graph := make([][]rune, m.height)
@@ -115,7 +122,7 @@ func (m *Model) View() string {
 		if i > numBucketsWithActualData {
 			break
 		}
-		slog.Info(fmt.Sprintf("bucket %v %v", i, point))
+		//slog.Info(fmt.Sprintf("bucket %v %v", i, point))
 		//slog.Info(fmt.Sprintf("Bucket %d: %v", allStatsIndex, point))
 		graph[m.height-1-int(point)][i] = '█' // Plot the point
 	}
