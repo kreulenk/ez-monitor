@@ -30,7 +30,7 @@ func (m Model) renderLiveDataView(currentHost string) string {
 }
 
 func (m Model) renderHistoricalDataView(currentHost string) string {
-	return lipgloss.JoinVertical(lipgloss.Top, m.cpuLineGraph.View(), m.HelpView())
+	return lipgloss.JoinVertical(lipgloss.Center, currentHost, lipgloss.JoinVertical(lipgloss.Top, m.cpuLineGraph.View(), m.HelpView()))
 }
 
 // joinVerticalStackedElementsWithBuffers will ensure that vertically stacked elements have the proper

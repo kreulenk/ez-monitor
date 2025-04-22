@@ -21,6 +21,8 @@ type Model struct {
 	height   int
 
 	dataCollectionErr error
+
+	styles Styles
 }
 
 func New(statName, unit string, minValue, maxValue float64) Model {
@@ -30,6 +32,8 @@ func New(statName, unit string, minValue, maxValue float64) Model {
 
 		minValue: minValue,
 		maxValue: maxValue,
+
+		styles: defaultStyles(),
 	}
 }
 
@@ -67,7 +71,7 @@ func (m *Model) View() string {
 	if m.dataCollectionErr != nil {
 		return fmt.Sprintf("Error: %v", m.dataCollectionErr)
 	}
-	if len(m.allStats) == 0 {
+	if len(m.allStats) == 0 || m.height < 1 {
 		return fmt.Sprintf("")
 	}
 
@@ -106,12 +110,15 @@ func (m *Model) View() string {
 		}
 	}
 
-	for i, point := range buckets {
-		if i >= numBucketsWithActualData {
+	for bucketIndex, point := range buckets {
+		if bucketIndex >= numBucketsWithActualData {
 			break
 		}
 
-		graph[m.height-1-int(point)][i] = '█' // Plot the point
+		for heightIndex := m.height - int(point) - 1; heightIndex < m.height; heightIndex++ {
+			graph[heightIndex][bucketIndex] = '█' // Plot the point
+		}
+
 	}
 
 	// Build the graph as a string
@@ -120,5 +127,5 @@ func (m *Model) View() string {
 		result += string(row) + "\n"
 	}
 
-	return result
+	return m.styles.Graph.Render(result)
 }

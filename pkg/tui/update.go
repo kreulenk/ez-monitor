@@ -64,8 +64,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.networkingReceivedChart.SetWidth(msg.Width/4 - 2)
 		m.networkingReceivedChart.SetHeight(msg.Height/2 - 2)
 
-		m.cpuLineGraph.SetWidth(msg.Width)
-		m.cpuLineGraph.SetHeight(msg.Height - 2)
+		m.cpuLineGraph.SetWidth(msg.Width - 2)
+		m.cpuLineGraph.SetHeight(msg.Height - 5)
 	}
 
 	return m, nil
