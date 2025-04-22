@@ -71,22 +71,13 @@ func (m *Model) View() string {
 		return fmt.Sprintf("")
 	}
 
-	// 1. Find smallest and largest timestamp = m.allStats[0].Timestamp, m.allStats[len(allStats)-1].Timestamp
-	// 2. Find width of table = m.width
-	// 3. Find the number of time buckets = (largest_timestamp - smallest_timestamp) / m.width
-	// 4. Find the number of data points in each time bucket = Math.Floor(len(m.allStats)/num_buckets)
-	// 5. Iterate over all the data and place it into a slice of the length of dataPointsPerBucket where you take an average per number data points per bucket
-	// Also normalize the value per the height = (avg_of_values_in_buckets - m.minValue) / (m.mavValue - m.minValue) * (m.height - 1)
-	// Graph the new slice
-	slog.Info(fmt.Sprintf("all the stats collected%v", m.allStats))
-
 	smallestTimestamp := m.allStats[0].Timestamp
 	largestTimestamp := m.allStats[len(m.allStats)-1].Timestamp
 	numBuckets := renderutils.Max(m.width, renderutils.Max(1, int(largestTimestamp.Unix()-smallestTimestamp.Unix())/m.width))
-	durationPerBucket := largestTimestamp.Sub(smallestTimestamp) / time.Duration(numBuckets)
 	var buckets []float64
-
 	numBucketsWithActualData := renderutils.Min(numBuckets, len(m.allStats))
+	durationPerBucket := largestTimestamp.Sub(smallestTimestamp) / time.Duration(numBucketsWithActualData)
+
 	for allStatsIndex, bucketIndex := 0, 0; allStatsIndex < numBucketsWithActualData; bucketIndex++ {
 		var sum float64
 		if allStatsIndex >= len(m.allStats) {
@@ -99,12 +90,9 @@ func (m *Model) View() string {
 			sum += m.allStats[allStatsIndex].Data
 			dataPointsInBucket++
 		}
-		//slog.Info(fmt.Sprintf("sum of allStats %v dataPointsInBucket %v", sum, dataPointsInBucket))
 		avg := sum / float64(dataPointsInBucket)
-		//slog.Info(fmt.Sprintf("data before normalization %v", avg))
 		normalizedValue := (avg - m.minValue) / (m.maxValue - m.minValue) * float64(m.height-1)
 		normalizedValue = math.Max(0, math.Min(normalizedValue, float64(m.height-1)))
-		//slog.Info(fmt.Sprintf("data after normalization %v", normalizedValue))
 		buckets = append(buckets, normalizedValue)
 	}
 	slog.Info(fmt.Sprintf("buckets %v", buckets))
@@ -119,11 +107,10 @@ func (m *Model) View() string {
 	}
 
 	for i, point := range buckets {
-		if i > numBucketsWithActualData {
+		if i >= numBucketsWithActualData {
 			break
 		}
-		//slog.Info(fmt.Sprintf("bucket %v %v", i, point))
-		//slog.Info(fmt.Sprintf("Bucket %d: %v", allStatsIndex, point))
+
 		graph[m.height-1-int(point)][i] = '█' // Plot the point
 	}
 
