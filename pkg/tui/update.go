@@ -47,6 +47,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, listenForStats(m.ctx, m.statsChan)
 	case tea.WindowSizeMsg:
 		m.height = msg.Height
+		m.width = msg.Width
 
 		// TODO we should probably use an interface to set these values at this point..
 		m.memBarChart.SetWidth(msg.Width/4 - 2)

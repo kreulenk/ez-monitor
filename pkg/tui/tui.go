@@ -28,6 +28,7 @@ type Model struct {
 	Help help.Model
 
 	height int
+	width  int
 
 	activeView ActiveView
 
