@@ -5,7 +5,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/kreulenk/ez-monitor/pkg/renderutils"
 	"github.com/kreulenk/ez-monitor/pkg/statistics"
-	"log/slog"
 	"math"
 	"time"
 )
@@ -82,7 +81,9 @@ func (m *Model) View() string {
 	numBucketsWithActualData := renderutils.Min(numBuckets, len(m.allStats))
 	durationPerBucket := largestTimestamp.Sub(smallestTimestamp) / time.Duration(numBucketsWithActualData)
 
-	for allStatsIndex, bucketIndex := 0, 0; allStatsIndex < numBucketsWithActualData; bucketIndex++ {
+	timesIterated := 0
+	for allStatsIndex, bucketIndex := 0, 0; allStatsIndex < len(m.allStats); bucketIndex++ {
+		timesIterated++
 		var sum float64
 		if allStatsIndex >= len(m.allStats) {
 			break
@@ -90,7 +91,7 @@ func (m *Model) View() string {
 
 		maxTimestampInBucket := smallestTimestamp.Add(durationPerBucket * time.Duration(bucketIndex))
 		dataPointsInBucket := 0
-		for ; allStatsIndex < len(m.allStats) && maxTimestampInBucket.Sub(m.allStats[allStatsIndex].Timestamp) > 0; allStatsIndex++ {
+		for ; allStatsIndex < len(m.allStats) && maxTimestampInBucket.Sub(m.allStats[allStatsIndex].Timestamp) >= 0; allStatsIndex++ {
 			sum += m.allStats[allStatsIndex].Data
 			dataPointsInBucket++
 		}
@@ -99,7 +100,6 @@ func (m *Model) View() string {
 		normalizedValue = math.Max(0, math.Min(normalizedValue, float64(m.height-1)))
 		buckets = append(buckets, normalizedValue)
 	}
-	slog.Info(fmt.Sprintf("buckets %v", buckets))
 
 	// Normalize data points to fit within the graph's height
 	graph := make([][]rune, m.height)
