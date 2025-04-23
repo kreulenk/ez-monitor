@@ -100,7 +100,7 @@ func (m *Model) View() string {
 		buckets = append(buckets, normalizedValue)
 	}
 
-	// Normalize data points to fit within the graph's height
+	// Create the canvas where other items will overwrite their data
 	graph := make([][]rune, m.height)
 	for i := range graph {
 		graph[i] = make([]rune, numBuckets)
@@ -109,15 +109,30 @@ func (m *Model) View() string {
 		}
 	}
 
+	// Add the actual bars onto the chart
 	for bucketIndex, point := range buckets {
 		if bucketIndex >= numBucketsWithActualData {
 			break
 		}
-
 		for heightIndex := m.height - int(point) - 1; heightIndex < m.height; heightIndex++ {
 			graph[heightIndex][bucketIndex] = '█' // Plot the point
 		}
+	}
 
+	// Place the max value along the top axis
+	maxValStr := fmt.Sprintf("%.1f%s", m.maxValue, m.unit)
+	if len(graph[len(graph)-1]) >= len(maxValStr) {
+		for i, j := len(graph[len(graph)-1])-len(maxValStr), 0; i < len(graph[len(graph)-1]); i, j = i+1, j+1 {
+			graph[len(graph)-1][i] = rune(maxValStr[j])
+		}
+	}
+
+	// Place the min value along the top axis
+	minValStr := fmt.Sprintf("%.1f%s", m.minValue, m.unit)
+	if len(graph[0]) >= len(minValStr) {
+		for i, j := len(graph[0])-len(minValStr), 0; i < len(graph[0]); i, j = i+1, j+1 {
+			graph[0][i] = rune(minValStr[j])
+		}
 	}
 
 	// Build the graph as a string
