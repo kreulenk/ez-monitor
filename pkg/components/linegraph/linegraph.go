@@ -84,19 +84,18 @@ func (m *Model) View() string {
 	timesIterated := 0
 	for allStatsIndex, bucketIndex := 0, 0; allStatsIndex < len(m.allStats); bucketIndex++ {
 		timesIterated++
-		var sum float64
 		if allStatsIndex >= len(m.allStats) {
 			break
 		}
 
+		var maxNum float64
 		maxTimestampInBucket := smallestTimestamp.Add(durationPerBucket * time.Duration(bucketIndex))
 		dataPointsInBucket := 0
 		for ; allStatsIndex < len(m.allStats) && maxTimestampInBucket.Sub(m.allStats[allStatsIndex].Timestamp) >= 0; allStatsIndex++ {
-			sum += m.allStats[allStatsIndex].Data
+			maxNum = math.Max(maxNum, m.allStats[allStatsIndex].Data)
 			dataPointsInBucket++
 		}
-		avg := sum / float64(dataPointsInBucket)
-		normalizedValue := (avg - m.minValue) / (m.maxValue - m.minValue) * float64(m.height-1)
+		normalizedValue := (maxNum - m.minValue) / (m.maxValue - m.minValue) * float64(m.height-1)
 		normalizedValue = math.Max(0, math.Min(normalizedValue, float64(m.height-1)))
 		buckets = append(buckets, normalizedValue)
 	}
