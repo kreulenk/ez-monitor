@@ -90,15 +90,8 @@ func (m *Model) updateActiveCharts() {
 	if lastStat == nil {
 		return
 	}
-	if m.activeView == LiveData {
-		m.updateLiveChildModelStats(lastStat)
-	} else {
-		if lastStat.CPUError == nil {
-			m.cpuLineGraph.SetAllStats(m.getAllCPUDataPoints())
-		} else {
-			m.cpuLineGraph.SetDataCollectionErr(lastStat.CPUError)
-		}
-	}
+	m.updateLiveChildModelStats(lastStat)
+	m.updateHistoricalChildModelStats(lastStat)
 }
 
 func (m *Model) updateLiveChildModelStats(stats *statistics.HostStat) {
@@ -127,6 +120,14 @@ func (m *Model) updateLiveChildModelStats(stats *statistics.HostStat) {
 	} else {
 		m.networkingSentChart.SetDataCollectionErr(stats.NetworkingError)
 		m.networkingReceivedChart.SetDataCollectionErr(stats.NetworkingError)
+	}
+}
+
+func (m *Model) updateHistoricalChildModelStats(stats *statistics.HostStat) {
+	if stats.CPUError == nil {
+		m.cpuLineGraph.SetAllStats(m.getAllCPUDataPoints())
+	} else {
+		m.cpuLineGraph.SetDataCollectionErr(stats.CPUError)
 	}
 }
 
