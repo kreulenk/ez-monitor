@@ -70,9 +70,10 @@ func (m *Model) View() string {
 	if m.dataCollectionErr != nil {
 		return fmt.Sprintf("Error: %v", m.dataCollectionErr)
 	}
-	if len(m.allStats) == 0 || m.height < 1 {
+	if len(m.allStats) == 0 || m.height < 2 {
 		return fmt.Sprintf("")
 	}
+	statsAdjustedHeight := renderutils.Max(1, m.height-2) // Used for normalization calculations to allow units to have their own row when displaying data
 
 	smallestTimestamp := m.allStats[0].Timestamp
 	largestTimestamp := m.allStats[len(m.allStats)-1].Timestamp
@@ -95,8 +96,8 @@ func (m *Model) View() string {
 			maxNum = math.Max(maxNum, m.allStats[allStatsIndex].Data)
 			dataPointsInBucket++
 		}
-		normalizedValue := (maxNum - m.minValue) / (m.maxValue - m.minValue) * float64(m.height-1)
-		normalizedValue = math.Max(0, math.Min(normalizedValue, float64(m.height-1)))
+		normalizedValue := (maxNum - m.minValue) / (m.maxValue - m.minValue) * float64(statsAdjustedHeight-1)
+		normalizedValue = math.Max(0, math.Min(normalizedValue, float64(statsAdjustedHeight-1)))
 		buckets = append(buckets, normalizedValue)
 	}
 
@@ -114,31 +115,35 @@ func (m *Model) View() string {
 		if bucketIndex >= numBucketsWithActualData {
 			break
 		}
-		for heightIndex := m.height - int(point) - 1; heightIndex < m.height; heightIndex++ {
+		for heightIndex := statsAdjustedHeight - int(point); heightIndex <= statsAdjustedHeight; heightIndex++ {
 			graph[heightIndex][bucketIndex] = '█' // Plot the point
 		}
 	}
 
 	// Place the max value along the top axis
 	maxValStr := fmt.Sprintf("%.1f%s", m.maxValue, m.unit)
-	if len(graph[len(graph)-1]) >= len(maxValStr) {
-		for i, j := len(graph[len(graph)-1])-len(maxValStr), 0; i < len(graph[len(graph)-1]); i, j = i+1, j+1 {
-			graph[len(graph)-1][i] = rune(maxValStr[j])
+	if len(graph[0]) >= len(maxValStr) {
+		for i, j := len(graph[0])-len(maxValStr), 0; i < len(graph[0]); i, j = i+1, j+1 {
+			graph[0][i] = rune(maxValStr[j])
 		}
 	}
 
 	// Place the min value along the top axis
 	minValStr := fmt.Sprintf("%.1f%s", m.minValue, m.unit)
-	if len(graph[0]) >= len(minValStr) {
-		for i, j := len(graph[0])-len(minValStr), 0; i < len(graph[0]); i, j = i+1, j+1 {
-			graph[0][i] = rune(minValStr[j])
+	if len(graph[len(graph)-1]) >= len(minValStr) {
+		for i, j := len(graph[len(graph)-1])-len(minValStr), 0; i < len(graph[len(graph)-1]); i, j = i+1, j+1 {
+			graph[len(graph)-1][i] = rune(minValStr[j])
 		}
 	}
 
 	// Build the graph as a string
 	var result string
-	for _, row := range graph {
-		result += string(row) + "\n"
+	for i, row := range graph {
+		if i == len(graph)-1 {
+			result += string(row)
+		} else {
+			result += string(row) + "\n"
+		}
 	}
 
 	return m.styles.Graph.Render(result)
