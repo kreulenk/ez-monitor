@@ -40,7 +40,9 @@ type Model struct {
 	networkingReceivedChart counter.Model
 
 	// Historical data
-	cpuLineGraph linegraph.Model
+	memLineGraph  linegraph.Model
+	cpuLineGraph  linegraph.Model
+	diskLineGraph linegraph.Model
 
 	statsChan chan *statistics.HostStat
 
@@ -76,12 +78,14 @@ func initialModel(ctx context.Context, inventoryInfo []inventory.Host, statsChan
 		// Live data charts
 		memBarChart:             barchart.New("memory", "MB", 0, 0), // 0 max value as we do not yet know the max
 		cpuBarChart:             barchart.New("cpu", "%", 0, 100),
-		diskBarChart:            barchart.New("disk", "MB", 0, 0), // 0 max value as we do not yet know the max
+		diskBarChart:            barchart.New("disk", "MB", 0, 0),
 		networkingSentChart:     counter.New("Net Sent", "MB"),
 		networkingReceivedChart: counter.New("Net Recv", "MB"),
 
 		// Historical data charts
-		cpuLineGraph: linegraph.New("cpu", "%", 0, 100),
+		memLineGraph:  linegraph.New("memory", "MB", 0, 0),
+		cpuLineGraph:  linegraph.New("cpu", "%", 0, 100),
+		diskLineGraph: linegraph.New("disk", "MB", 0, 0),
 
 		statsChan: statsChan,
 

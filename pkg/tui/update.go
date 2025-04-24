@@ -65,8 +65,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.networkingReceivedChart.SetWidth(msg.Width/4 - 2)
 		m.networkingReceivedChart.SetHeight(msg.Height/2 - 2)
 
+		m.memLineGraph.SetWidth(msg.Width - 2)
+		m.memLineGraph.SetHeight(msg.Height/3 - 3)
+
 		m.cpuLineGraph.SetWidth(msg.Width - 2)
-		m.cpuLineGraph.SetHeight(msg.Height - 5)
+		m.cpuLineGraph.SetHeight(msg.Height/3 - 3)
+
+		m.diskLineGraph.SetWidth(msg.Width - 2)
+		m.diskLineGraph.SetHeight(msg.Height/3 - 3)
 	}
 
 	return m, nil
@@ -124,20 +130,61 @@ func (m *Model) updateLiveChildModelStats(stats *statistics.HostStat) {
 }
 
 func (m *Model) updateHistoricalChildModelStats(stats *statistics.HostStat) {
+	if stats.MemoryError == nil {
+		m.memLineGraph.SetAllStats(m.getAllMemDataPoints())
+		m.memLineGraph.SetMaxValue(stats.MemoryTotal)
+	} else {
+		m.memLineGraph.SetDataCollectionErr(stats.MemoryError)
+	}
+
 	if stats.CPUError == nil {
 		m.cpuLineGraph.SetAllStats(m.getAllCPUDataPoints())
 	} else {
 		m.cpuLineGraph.SetDataCollectionErr(stats.CPUError)
 	}
+
+	if stats.DiskError == nil {
+		m.diskLineGraph.SetAllStats(m.getAllDiskDataPoints())
+		m.diskLineGraph.SetMaxValue(stats.DiskTotal)
+	} else {
+		m.diskLineGraph.SetDataCollectionErr(stats.DiskError)
+	}
 }
 
 // TODO investigate caching this data or restructuring how we store the data
+// TODO make the getAllDataPoints methods generic
+func (m Model) getAllMemDataPoints() []statistics.HistoricalDataPoint {
+	currentHostStats := m.statsCollector[m.inventoryIndexToNameMap[m.currentIndex]]
+	cpuStats := make([]statistics.HistoricalDataPoint, 0, len(currentHostStats))
+	if len(currentHostStats) > 0 {
+		for _, hostStat := range currentHostStats {
+			cpuStats = append(cpuStats, statistics.HistoricalDataPoint{Data: hostStat.MemoryUsage, Timestamp: hostStat.Timestamp})
+		}
+		return cpuStats
+	}
+	return nil
+}
+
+// TODO make the getAllDataPoints methods generic
 func (m Model) getAllCPUDataPoints() []statistics.HistoricalDataPoint {
 	currentHostStats := m.statsCollector[m.inventoryIndexToNameMap[m.currentIndex]]
 	cpuStats := make([]statistics.HistoricalDataPoint, 0, len(currentHostStats))
 	if len(currentHostStats) > 0 {
 		for _, hostStat := range currentHostStats {
 			cpuStats = append(cpuStats, statistics.HistoricalDataPoint{Data: hostStat.CPUUsage, Timestamp: hostStat.Timestamp})
+		}
+		return cpuStats
+	}
+	return nil
+}
+
+// TODO make the getAllDataPoints methods generic
+func (m Model) getAllDiskDataPoints() []statistics.HistoricalDataPoint {
+	currentHostStats := m.statsCollector[m.inventoryIndexToNameMap[m.currentIndex]]
+	cpuStats := make([]statistics.HistoricalDataPoint, 0, len(currentHostStats))
+	if len(currentHostStats) > 0 {
+		for _, hostStat := range currentHostStats {
+			cpuStats = append(cpuStats, statistics.HistoricalDataPoint{Data: hostStat.DiskUsage, Timestamp: hostStat.Timestamp})
 		}
 		return cpuStats
 	}

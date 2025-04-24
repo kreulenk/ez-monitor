@@ -32,7 +32,7 @@ func (m Model) renderLiveDataView(currentHost string) string {
 
 func (m Model) renderHistoricalDataView(currentHost string) string {
 	return lipgloss.JoinVertical(lipgloss.Top, m.renderCurrentHostTopBar(currentHost),
-		lipgloss.JoinVertical(lipgloss.Top, m.cpuLineGraph.View(), m.HelpView()),
+		lipgloss.JoinVertical(lipgloss.Top, m.memLineGraph.View(), m.cpuLineGraph.View(), m.diskLineGraph.View(), m.HelpView()),
 	)
 }
 
