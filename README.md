@@ -80,7 +80,7 @@ The high level plan for this project is as follows:
 |:-:|-------------------------------------------------|:------:|
 | 1 | Support for ini inventory files                 |   ✅   |
 | 2 | Display real time data in bar graphs            |   ✅   |
-| 3 | Display historical data with line graphs        |   ❌   |
+| 3 | Display historical data with line graphs        |   ✅   |
 | 4 | Support hashing of passwords in inventory files |   ❌   |
 | 5 | Improve the styling of the graphs displayed     |   ❌   |
 | 5 | TBD!                                            |   💥   |

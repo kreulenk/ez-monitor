@@ -13,4 +13,13 @@ Left
 Sleep 4s
 Left
 Sleep 6s
+Type "h"
+Sleep 8s
+Right 2
+Sleep 6s
+Left
+Sleep 4s
+Left
+Sleep 6s
+
 
