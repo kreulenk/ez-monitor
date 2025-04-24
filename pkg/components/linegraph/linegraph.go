@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/kreulenk/ez-monitor/pkg/renderutils"
 	"github.com/kreulenk/ez-monitor/pkg/statistics"
+	"log/slog"
 	"math"
 	"time"
 )
@@ -91,11 +92,20 @@ func (m *Model) View() string {
 		}
 
 		var maxNum float64
-		maxTimestampInBucket := smallestTimestamp.Add(durationPerBucket * time.Duration(bucketIndex))
-		dataPointsInBucket := 0
-		for ; allStatsIndex < len(m.allStats) && maxTimestampInBucket.Sub(m.allStats[allStatsIndex].Timestamp) >= 0; allStatsIndex++ {
+		maxTimestampInBucket := smallestTimestamp.Add(durationPerBucket * time.Duration(bucketIndex+1))
+
+		for ; allStatsIndex < len(m.allStats); allStatsIndex++ {
+			if m.statName == "memory" {
+				slog.Info(fmt.Sprintf("placing stat %d with value %f in bucket %d", allStatsIndex, m.allStats[allStatsIndex].Data, bucketIndex))
+			}
 			maxNum = math.Max(maxNum, m.allStats[allStatsIndex].Data)
-			dataPointsInBucket++
+			if numBuckets > numBucketsWithActualData { // Only place data in a bucket once if we have more buckets than data
+				allStatsIndex++
+				break
+			}
+			if allStatsIndex+1 < len(m.allStats) && maxTimestampInBucket.Sub(m.allStats[allStatsIndex+1].Timestamp) < 0 {
+				break
+			}
 		}
 		normalizedValue := (maxNum - m.minValue) / (m.maxValue - m.minValue) * float64(labelAdjustedHeight-1)
 		normalizedValue = math.Max(0, math.Min(normalizedValue, float64(labelAdjustedHeight-1)))

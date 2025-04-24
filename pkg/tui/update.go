@@ -131,7 +131,8 @@ func (m *Model) updateLiveChildModelStats(stats *statistics.HostStat) {
 
 func (m *Model) updateHistoricalChildModelStats(stats *statistics.HostStat) {
 	if stats.MemoryError == nil {
-		m.memLineGraph.SetAllStats(m.getAllMemDataPoints())
+		memData := m.getAllMemDataPoints()
+		m.memLineGraph.SetAllStats(memData)
 		m.memLineGraph.SetMaxValue(stats.MemoryTotal)
 	} else {
 		m.memLineGraph.SetDataCollectionErr(stats.MemoryError)
@@ -155,12 +156,12 @@ func (m *Model) updateHistoricalChildModelStats(stats *statistics.HostStat) {
 // TODO make the getAllDataPoints methods generic
 func (m Model) getAllMemDataPoints() []statistics.HistoricalDataPoint {
 	currentHostStats := m.statsCollector[m.inventoryIndexToNameMap[m.currentIndex]]
-	cpuStats := make([]statistics.HistoricalDataPoint, 0, len(currentHostStats))
+	memStats := make([]statistics.HistoricalDataPoint, 0, len(currentHostStats))
 	if len(currentHostStats) > 0 {
 		for _, hostStat := range currentHostStats {
-			cpuStats = append(cpuStats, statistics.HistoricalDataPoint{Data: hostStat.MemoryUsage, Timestamp: hostStat.Timestamp})
+			memStats = append(memStats, statistics.HistoricalDataPoint{Data: hostStat.MemoryUsage, Timestamp: hostStat.Timestamp})
 		}
-		return cpuStats
+		return memStats
 	}
 	return nil
 }
@@ -181,12 +182,12 @@ func (m Model) getAllCPUDataPoints() []statistics.HistoricalDataPoint {
 // TODO make the getAllDataPoints methods generic
 func (m Model) getAllDiskDataPoints() []statistics.HistoricalDataPoint {
 	currentHostStats := m.statsCollector[m.inventoryIndexToNameMap[m.currentIndex]]
-	cpuStats := make([]statistics.HistoricalDataPoint, 0, len(currentHostStats))
+	diskStats := make([]statistics.HistoricalDataPoint, 0, len(currentHostStats))
 	if len(currentHostStats) > 0 {
 		for _, hostStat := range currentHostStats {
-			cpuStats = append(cpuStats, statistics.HistoricalDataPoint{Data: hostStat.DiskUsage, Timestamp: hostStat.Timestamp})
+			diskStats = append(diskStats, statistics.HistoricalDataPoint{Data: hostStat.DiskUsage, Timestamp: hostStat.Timestamp})
 		}
-		return cpuStats
+		return diskStats
 	}
 	return nil
 }
