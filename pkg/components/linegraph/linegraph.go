@@ -3,6 +3,7 @@ package linegraph
 import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/kreulenk/ez-monitor/pkg/renderutils"
 	"github.com/kreulenk/ez-monitor/pkg/statistics"
 	"math"
@@ -73,7 +74,7 @@ func (m *Model) View() string {
 	if len(m.allStats) == 0 || m.height < 2 {
 		return fmt.Sprintf("")
 	}
-	statsAdjustedHeight := renderutils.Max(1, m.height-2) // Used for normalization calculations to allow units to have their own row when displaying data
+	labelAdjustedHeight := renderutils.Max(1, m.height-2) // Take top and bottom spaces for statName and min/max values
 
 	smallestTimestamp := m.allStats[0].Timestamp
 	largestTimestamp := m.allStats[len(m.allStats)-1].Timestamp
@@ -96,13 +97,13 @@ func (m *Model) View() string {
 			maxNum = math.Max(maxNum, m.allStats[allStatsIndex].Data)
 			dataPointsInBucket++
 		}
-		normalizedValue := (maxNum - m.minValue) / (m.maxValue - m.minValue) * float64(statsAdjustedHeight-1)
-		normalizedValue = math.Max(0, math.Min(normalizedValue, float64(statsAdjustedHeight-1)))
+		normalizedValue := (maxNum - m.minValue) / (m.maxValue - m.minValue) * float64(labelAdjustedHeight-1)
+		normalizedValue = math.Max(0, math.Min(normalizedValue, float64(labelAdjustedHeight-1)))
 		buckets = append(buckets, normalizedValue)
 	}
 
 	// Create the canvas where other items will overwrite their data
-	graph := make([][]rune, m.height)
+	graph := make([][]rune, labelAdjustedHeight)
 	for i := range graph {
 		graph[i] = make([]rune, numBuckets)
 		for j := range graph[i] {
@@ -115,24 +116,8 @@ func (m *Model) View() string {
 		if bucketIndex >= numBucketsWithActualData {
 			break
 		}
-		for heightIndex := statsAdjustedHeight - int(point); heightIndex <= statsAdjustedHeight; heightIndex++ {
+		for heightIndex := labelAdjustedHeight - int(point) - 1; heightIndex < labelAdjustedHeight; heightIndex++ {
 			graph[heightIndex][bucketIndex] = '█' // Plot the point
-		}
-	}
-
-	// Place the max value along the top axis
-	maxValStr := fmt.Sprintf("%.1f%s", m.maxValue, m.unit)
-	if len(graph[0]) >= len(maxValStr) {
-		for i, j := len(graph[0])-len(maxValStr), 0; i < len(graph[0]); i, j = i+1, j+1 {
-			graph[0][i] = rune(maxValStr[j])
-		}
-	}
-
-	// Place the min value along the top axis
-	minValStr := fmt.Sprintf("%.1f%s", m.minValue, m.unit)
-	if len(graph[len(graph)-1]) >= len(minValStr) {
-		for i, j := len(graph[len(graph)-1])-len(minValStr), 0; i < len(graph[len(graph)-1]); i, j = i+1, j+1 {
-			graph[len(graph)-1][i] = rune(minValStr[j])
 		}
 	}
 
@@ -146,5 +131,16 @@ func (m *Model) View() string {
 		}
 	}
 
-	return m.styles.Graph.Render(result)
+	maxValStr := fmt.Sprintf("%.1f%s", m.maxValue, m.unit)
+	minValStr := fmt.Sprintf("%.1f%s", m.minValue, m.unit)
+	return m.styles.Graph.Render(
+		lipgloss.JoinVertical(lipgloss.Right,
+			maxValStr,
+			m.styles.Bars.Render(result),
+			lipgloss.JoinHorizontal(lipgloss.Right,
+				lipgloss.NewStyle().PaddingRight(len(graph[0])/2-len(minValStr)/2).Render(m.statName),
+				minValStr,
+			),
+		),
+	)
 }
