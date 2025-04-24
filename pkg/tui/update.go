@@ -73,6 +73,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		m.diskLineGraph.SetWidth(msg.Width - 2)
 		m.diskLineGraph.SetHeight(msg.Height/3 - 3)
+		return m, tea.ClearScreen
 	}
 
 	return m, nil
@@ -153,43 +154,37 @@ func (m *Model) updateHistoricalChildModelStats(stats *statistics.HostStat) {
 }
 
 // TODO investigate caching this data or restructuring how we store the data
-// TODO make the getAllDataPoints methods generic
+func (m Model) getAllDataPoints(selector func(*statistics.HostStat) float64) []statistics.HistoricalDataPoint {
+	currentHostStats := m.statsCollector[m.inventoryIndexToNameMap[m.currentIndex]]
+	dataPoints := make([]statistics.HistoricalDataPoint, 0, len(currentHostStats))
+	if len(currentHostStats) > 0 {
+		for _, hostStat := range currentHostStats {
+			dataPoints = append(dataPoints, statistics.HistoricalDataPoint{
+				Data:      selector(hostStat),
+				Timestamp: hostStat.Timestamp,
+			})
+		}
+		return dataPoints
+	}
+	return nil
+}
+
 func (m Model) getAllMemDataPoints() []statistics.HistoricalDataPoint {
-	currentHostStats := m.statsCollector[m.inventoryIndexToNameMap[m.currentIndex]]
-	memStats := make([]statistics.HistoricalDataPoint, 0, len(currentHostStats))
-	if len(currentHostStats) > 0 {
-		for _, hostStat := range currentHostStats {
-			memStats = append(memStats, statistics.HistoricalDataPoint{Data: hostStat.MemoryUsage, Timestamp: hostStat.Timestamp})
-		}
-		return memStats
-	}
-	return nil
+	return m.getAllDataPoints(func(stat *statistics.HostStat) float64 {
+		return stat.MemoryUsage
+	})
 }
 
-// TODO make the getAllDataPoints methods generic
 func (m Model) getAllCPUDataPoints() []statistics.HistoricalDataPoint {
-	currentHostStats := m.statsCollector[m.inventoryIndexToNameMap[m.currentIndex]]
-	cpuStats := make([]statistics.HistoricalDataPoint, 0, len(currentHostStats))
-	if len(currentHostStats) > 0 {
-		for _, hostStat := range currentHostStats {
-			cpuStats = append(cpuStats, statistics.HistoricalDataPoint{Data: hostStat.CPUUsage, Timestamp: hostStat.Timestamp})
-		}
-		return cpuStats
-	}
-	return nil
+	return m.getAllDataPoints(func(stat *statistics.HostStat) float64 {
+		return stat.CPUUsage
+	})
 }
 
-// TODO make the getAllDataPoints methods generic
 func (m Model) getAllDiskDataPoints() []statistics.HistoricalDataPoint {
-	currentHostStats := m.statsCollector[m.inventoryIndexToNameMap[m.currentIndex]]
-	diskStats := make([]statistics.HistoricalDataPoint, 0, len(currentHostStats))
-	if len(currentHostStats) > 0 {
-		for _, hostStat := range currentHostStats {
-			diskStats = append(diskStats, statistics.HistoricalDataPoint{Data: hostStat.DiskUsage, Timestamp: hostStat.Timestamp})
-		}
-		return diskStats
-	}
-	return nil
+	return m.getAllDataPoints(func(stat *statistics.HostStat) float64 {
+		return stat.DiskUsage
+	})
 }
 
 func (m Model) getLastDataPoint() *statistics.HostStat {
