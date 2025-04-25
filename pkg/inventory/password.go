@@ -19,7 +19,6 @@ func BeginPasswordEncryptFlow(hostToAddEncryptedPassword, filename string) error
 	if err != nil {
 		return fmt.Errorf("failed to load ini data: %s", err)
 	}
-
 	hostSection, err := cfg.GetSection(hostToAddEncryptedPassword)
 	if err != nil { // This func only returns an error if the section does not exist
 		// If the section does not exist, we will add it
@@ -67,7 +66,7 @@ func BeginPasswordEncryptFlow(hostToAddEncryptedPassword, filename string) error
 	}
 	hostSection.Key("password").SetValue(encryptedHostPassword)
 
-	err = cfg.SaveTo(filename)
+	err = addOrReplacePasswordValue(filename, hostToAddEncryptedPassword, encryptedHostPassword)
 	if err != nil {
 		return fmt.Errorf("failed to save ini data: %s", err)
 	}
@@ -134,5 +133,81 @@ func exitIfNoResponse() error {
 	if strings.ToLower(response) != "y" {
 		os.Exit(0)
 	}
+	return nil
+}
+
+// addOrReplacePasswordValue is a customer implementation seperate from the ini package.
+// This is necessary to preserve the files formatting and comments as the ini package will reformat
+// The file if used to save a new config when using config.SaveTo()
+// This function which will perform the following actions
+// 1. Load in the ini inventory file
+// 2. Add or replace the password for the appropriate host. If the host does not exist, it will add a host value at the bottom of the file
+// 3. Replace the file with the new contents
+func addOrReplacePasswordValue(filename, hostToAddEncryptedPassword, encryptedHostPassword string) error {
+	content, err := os.ReadFile(filename)
+	if err != nil {
+		return fmt.Errorf("failed to read file: %s", err)
+	}
+
+	lines := strings.Split(string(content), "\n")
+	var updatedLines []string
+	sectionFound := false
+	passwordUpdated := false
+	sectionHeader := "[" + hostToAddEncryptedPassword + "]"
+	newPasswordLine := fmt.Sprintf("password = `%s`", encryptedHostPassword)
+
+	for i := 0; i < len(lines); i++ {
+		line := lines[i]
+		trimmedLine := strings.TrimSpace(line)
+
+		// Check if the current line is the section header
+		if trimmedLine == sectionHeader {
+			sectionFound = true
+			updatedLines = append(updatedLines, line)
+
+			// Process the section to add or replace the password
+			for i++; i < len(lines); i++ {
+				trimmedLine = strings.TrimSpace(lines[i])
+
+				// Stop processing if a new section starts
+				if strings.HasPrefix(trimmedLine, "[") && strings.HasSuffix(trimmedLine, "]") {
+					updatedLines = append(updatedLines, newPasswordLine)
+					passwordUpdated = true
+					break
+				}
+
+				// Replace the password if it exists
+				if strings.HasPrefix(trimmedLine, "password") {
+					updatedLines = append(updatedLines, newPasswordLine)
+					passwordUpdated = true
+				} else {
+					updatedLines = append(updatedLines, lines[i])
+				}
+			}
+		}
+
+		// Add the current line to the updated lines if not processed
+		if !passwordUpdated {
+			updatedLines = append(updatedLines, line)
+		}
+	}
+
+	// If the section was not found, add it at the end
+	if !sectionFound {
+		updatedLines = append(updatedLines, sectionHeader)
+		updatedLines = append(updatedLines, newPasswordLine)
+	}
+
+	// Write the updated content back to the file
+	stat, err := os.Stat(filename)
+	if err != nil {
+		return fmt.Errorf("failed to stat file: %s", err)
+	}
+
+	err = os.WriteFile(filename, []byte(strings.Join(updatedLines, "\n")), stat.Mode())
+	if err != nil {
+		return fmt.Errorf("failed to write updated file: %s", err)
+	}
+
 	return nil
 }
