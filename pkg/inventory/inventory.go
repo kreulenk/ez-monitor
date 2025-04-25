@@ -8,7 +8,7 @@ import (
 )
 
 type Host struct {
-	Name              string
+	Alias             string
 	Username          string
 	Password          string
 	Address           string
@@ -30,19 +30,19 @@ func LoadInventory(filename string) ([]Host, error) {
 
 	hostMap := make(map[string]Host)
 	for _, section := range cfg.Sections() {
-		hostname := section.Name()
-		if hostname == ini.DefaultSection {
+		hostAlias := section.Name()
+		if hostAlias == ini.DefaultSection {
 			for _, key := range section.Keys() {
 				return nil, fmt.Errorf("variables %s=%s must be defined under a host section", key.Name(), key.Value())
 			}
 			continue
 		}
-		if _, ok := hostMap[hostname]; ok {
-			return nil, fmt.Errorf("duplicate host section: %s", hostname)
+		if _, ok := hostMap[hostAlias]; ok {
+			return nil, fmt.Errorf("duplicate host section: %s", hostAlias)
 		}
 
 		host := Host{
-			Name: hostname,
+			Alias: hostAlias,
 		}
 		for _, key := range section.Keys() {
 			switch key.Name() {
@@ -55,15 +55,15 @@ func LoadInventory(filename string) ([]Host, error) {
 			case "port":
 				host.Port, err = strconv.Atoi(key.Value())
 				if err != nil {
-					return nil, fmt.Errorf("invalid port in section %s: %s", hostname, err)
+					return nil, fmt.Errorf("invalid port in section %s: %s", hostAlias, err)
 				}
 			case "ssh_private_key_file":
 				host.SshPrivateKeyFile = key.Value()
 			default:
-				return nil, fmt.Errorf("unknown variable %s for host %s", key.Name(), hostname)
+				return nil, fmt.Errorf("unknown variable %s for host %s", key.Name(), hostAlias)
 			}
 		}
-		hostMap[hostname] = host
+		hostMap[hostAlias] = host
 	}
 
 	hostList := make([]Host, 0, len(hostMap))

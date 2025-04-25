@@ -16,8 +16,8 @@ type HistoricalDataPoint struct {
 }
 
 type HostStat struct {
-	NameOfHost string // The term hostname makes naming this field difficult...
-	Address    string
+	HostAlias string
+	Address   string
 
 	CPUUsage float64
 	CPUError error
@@ -160,9 +160,9 @@ func getNetworkingUsage(client *ssh.Client) (sent float64, received float64, err
 
 func getHostStats(host ConnectionInfo) *HostStat {
 	stats := &HostStat{
-		NameOfHost: host.InventoryInfo.Name,
-		Address:    host.InventoryInfo.Address,
-		Timestamp:  time.Now(),
+		HostAlias: host.InventoryInfo.Alias,
+		Address:   host.InventoryInfo.Address,
+		Timestamp: time.Now(),
 	}
 
 	stats.CPUUsage, stats.CPUError = getCPUUsage(host.connectionClient)

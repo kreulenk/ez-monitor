@@ -33,14 +33,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case statsMsg:
 		// Append the statistic to the statsCollector for each host
-		if _, ok := m.statsCollector[msg.NameOfHost]; ok {
-			m.statsCollector[msg.NameOfHost] = append(m.statsCollector[msg.NameOfHost], msg)
+		if _, ok := m.statsCollector[msg.HostAlias]; ok {
+			m.statsCollector[msg.HostAlias] = append(m.statsCollector[msg.HostAlias], msg)
 		} else {
-			m.statsCollector[msg.NameOfHost] = []*statistics.HostStat{msg}
+			m.statsCollector[msg.HostAlias] = []*statistics.HostStat{msg}
 		}
 
 		// If the latest update came from the host we are on, update the charts with this data
-		if m.currentIndex == m.inventoryNameToIndexMap[msg.NameOfHost] {
+		if m.currentIndex == m.inventoryNameToIndexMap[msg.HostAlias] {
 			m.updateActiveCharts()
 		}
 

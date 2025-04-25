@@ -63,11 +63,11 @@ func Initialize(ctx context.Context, inventoryInfo []inventory.Host, statsChan c
 }
 
 func initialModel(ctx context.Context, inventoryInfo []inventory.Host, statsChan chan *statistics.HostStat) tea.Model {
-	var inventoryNameToIndexMap = make(map[string]int)
-	var inventoryIndexToNameMap = make(map[int]string)
+	var hostAliasToIndexMap = make(map[string]int)
+	var hostIndexToAliasMap = make(map[int]string)
 	for i, host := range inventoryInfo {
-		inventoryNameToIndexMap[host.Name] = i
-		inventoryIndexToNameMap[i] = host.Name
+		hostAliasToIndexMap[host.Alias] = i
+		hostIndexToAliasMap[i] = host.Alias
 	}
 
 	return Model{
@@ -90,8 +90,8 @@ func initialModel(ctx context.Context, inventoryInfo []inventory.Host, statsChan
 
 		statsChan: statsChan,
 
-		inventoryNameToIndexMap: inventoryNameToIndexMap,
-		inventoryIndexToNameMap: inventoryIndexToNameMap,
+		inventoryNameToIndexMap: hostAliasToIndexMap,
+		inventoryIndexToNameMap: hostIndexToAliasMap,
 		currentIndex:            0,
 		statsCollector:          make(map[string][]*statistics.HostStat),
 	}
