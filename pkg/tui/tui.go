@@ -11,6 +11,7 @@ import (
 	"github.com/kreulenk/ez-monitor/pkg/components/linegraph"
 	"github.com/kreulenk/ez-monitor/pkg/inventory"
 	"github.com/kreulenk/ez-monitor/pkg/statistics"
+	"github.com/kreulenk/ez-monitor/pkg/unit"
 	"github.com/muesli/termenv"
 	"os"
 )
@@ -76,16 +77,16 @@ func initialModel(ctx context.Context, inventoryInfo []inventory.Host, statsChan
 		activeView: LiveData,
 
 		// Live data charts
-		memBarChart:             barchart.New("memory", "MB", 0, 0), // 0 max value as we do not yet know the max
-		cpuBarChart:             barchart.New("cpu", "%", 0, 100),
-		diskBarChart:            barchart.New("disk", "MB", 0, 0),
-		networkingSentChart:     counter.New("Net Sent", "MB"),
-		networkingReceivedChart: counter.New("Net Recv", "MB"),
+		memBarChart:             barchart.New("memory", unit.Megabyte, 0, 0), // 0 max value as we do not yet know the max
+		cpuBarChart:             barchart.New("cpu", unit.Percentage, 0, 100),
+		diskBarChart:            barchart.New("disk", unit.Megabyte, 0, 0),
+		networkingSentChart:     counter.New("Net Sent", unit.Megabyte),
+		networkingReceivedChart: counter.New("Net Recv", unit.Megabyte),
 
 		// Historical data charts
-		memLineGraph:  linegraph.New("memory", "MB", 0, 0),
-		cpuLineGraph:  linegraph.New("cpu", "%", 0, 100),
-		diskLineGraph: linegraph.New("disk", "MB", 0, 0),
+		memLineGraph:  linegraph.New("memory", unit.Megabyte, 0, 0),
+		cpuLineGraph:  linegraph.New("cpu", unit.Percentage, 0, 100),
+		diskLineGraph: linegraph.New("disk", unit.Megabyte, 0, 0),
 
 		statsChan: statsChan,
 

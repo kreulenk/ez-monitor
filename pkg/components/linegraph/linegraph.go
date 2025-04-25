@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/kreulenk/ez-monitor/pkg/renderutils"
 	"github.com/kreulenk/ez-monitor/pkg/statistics"
+	"github.com/kreulenk/ez-monitor/pkg/unit"
 	"log/slog"
 	"math"
 	"time"
@@ -13,7 +14,7 @@ import (
 
 type Model struct {
 	statName string
-	unit     string
+	unit     unit.DataType
 
 	minValue float64
 	maxValue float64
@@ -26,7 +27,7 @@ type Model struct {
 	styles Styles
 }
 
-func New(statName, unit string, minValue, maxValue float64) Model {
+func New(statName string, unit unit.DataType, minValue, maxValue float64) Model {
 	return Model{
 		statName: statName,
 		unit:     unit,
@@ -141,8 +142,8 @@ func (m *Model) View() string {
 		}
 	}
 
-	maxValStr := fmt.Sprintf("%.1f%s", m.maxValue, m.unit)
-	minValStr := fmt.Sprintf("%.1f%s", m.minValue, m.unit)
+	maxValStr := unit.DisplayType(m.maxValue, m.unit)
+	minValStr := unit.DisplayType(m.minValue, m.unit)
 	return m.styles.Graph.Render(
 		lipgloss.JoinVertical(lipgloss.Right,
 			maxValStr,

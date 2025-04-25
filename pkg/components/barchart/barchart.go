@@ -1,17 +1,17 @@
 package barchart
 
 import (
-	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/kreulenk/ez-monitor/pkg/renderutils"
+	"github.com/kreulenk/ez-monitor/pkg/unit"
 	"math"
 	"strings"
 )
 
 type Model struct {
 	statName string
-	unit     string
+	unit     unit.DataType
 
 	minValue     float64
 	maxValue     float64
@@ -24,7 +24,7 @@ type Model struct {
 	styles Styles
 }
 
-func New(statName, unit string, minValue, maxValue float64) Model {
+func New(statName string, unit unit.DataType, minValue, maxValue float64) Model {
 	return Model{
 		statName: statName,
 		unit:     unit,
@@ -85,9 +85,9 @@ func (m *Model) View() string {
 	bars := make([]string, totalHeightOfBar)
 	for i := 0; i < totalHeightOfBar; i++ {
 		if i == 0 && m.maxValue != m.minValue {
-			bars[i] = overlayTextOnBar(m.width, fmt.Sprintf("%.1f %s", m.maxValue, m.unit), m.styles.BackGroundBar)
+			bars[i] = overlayTextOnBar(m.width, unit.DisplayType(m.maxValue, m.unit), m.styles.BackGroundBar)
 		} else if i == totalHeightOfBar-valueBarHeight-1 {
-			bars[i] = overlayTextOnBar(m.width, fmt.Sprintf("%.1f %s", m.currentValue, m.unit), m.styles.BackGroundBar)
+			bars[i] = overlayTextOnBar(m.width, unit.DisplayType(m.currentValue, m.unit), m.styles.BackGroundBar)
 		} else if i < totalHeightOfBar-valueBarHeight {
 			bars[i] = m.styles.BackGroundBar.Render(strings.Repeat("█", m.width))
 		} else {

@@ -1,15 +1,15 @@
 package counter
 
 import (
-	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/kreulenk/ez-monitor/pkg/renderutils"
+	"github.com/kreulenk/ez-monitor/pkg/unit"
 )
 
 type Model struct {
 	statName string
-	unit     string
+	unit     unit.DataType
 
 	currentValue float64
 	width        int
@@ -20,7 +20,7 @@ type Model struct {
 	styles Styles
 }
 
-func New(statName, unit string) Model {
+func New(statName string, unit unit.DataType) Model {
 	return Model{
 		statName: statName,
 		unit:     unit,
@@ -69,7 +69,7 @@ func (m *Model) View() string {
 	currentValue := lipgloss.NewStyle().
 		Width(m.width - 2).
 		AlignHorizontal(lipgloss.Center).
-		Render(fmt.Sprintf("%.2f%s", m.currentValue, m.unit))
+		Render(unit.DisplayType(m.currentValue, m.unit))
 	currentValueWithTopPadding := lipgloss.NewStyle().
 		PaddingTop((totalHeightOfBar - lipgloss.Height(currentValue)) / 2).
 		Render(currentValue)
