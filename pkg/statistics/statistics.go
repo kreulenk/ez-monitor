@@ -1,6 +1,7 @@
 package statistics
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/kreulenk/ez-monitor/pkg/inventory"
@@ -67,7 +68,7 @@ func StartStatisticsCollection(ctx context.Context, inventoryInfo []inventory.Ho
 func getCPUUsage(client *ssh.Client) (float64, error) {
 	command := "mpstat 1 1 | awk '$12 ~ /[0-9.]+/ {print 100 - $12}' | tail -1"
 
-	alternativeCommand := "top -bn1 | grep '%Cpu' | awk '{print $2 + $4}'"
+	alternativeCommand := "top -bn2 -d1 | grep '%Cpu' | tail -1 | awk '{print $2 + $4}'"
 
 	output, err := executeCommand(client, command)
 	if err != nil {
@@ -179,9 +180,12 @@ func executeCommand(client *ssh.Client, command string) (string, error) {
 		return "", fmt.Errorf("failed to create session: %s", err)
 	}
 	defer session.Close()
-	output, err := session.CombinedOutput(command)
-	if err != nil {
+	var stdout, stderr bytes.Buffer
+	session.Stdout = &stdout
+	session.Stderr = &stderr
+	err = session.Run(command)
+	if err != nil || stderr.Len() > 0 {
 		return "", fmt.Errorf("failed to execute command %s: %s", command, err)
 	}
-	return string(output), nil
+	return stdout.String(), nil
 }
