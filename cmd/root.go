@@ -14,6 +14,7 @@ import (
 
 func genRootCmd() *cobra.Command {
 	var version bool
+	var hostToAddEncryptedPassword string
 
 	var cmd = &cobra.Command{
 		Use:   "ez-monitor <inventory-file>",
@@ -23,6 +24,9 @@ func genRootCmd() *cobra.Command {
 			if len(args) < 1 && !version {
 				return errors.New("no inventory file was provided")
 			}
+			if len(args) > 1 {
+				return errors.New("too many arguments were provided. You must specify a single inventory file")
+			}
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
@@ -31,9 +35,13 @@ func genRootCmd() *cobra.Command {
 				fmt.Printf("%s\n%s_%s\n%s\n", build.Version, runtime.GOOS, runtime.GOARCH, build.SHA)
 				return
 			}
+			if hostToAddEncryptedPassword != "" {
+				err := inventory.BeginPasswordEncryptFlow(hostToAddEncryptedPassword, args[0])
+				cobra.CheckErr(err)
+				os.Exit(0)
+			}
 
-			filename := args[0]
-			inventoryInfo, err := inventory.LoadInventory(filename)
+			inventoryInfo, err := inventory.LoadInventory(args[0])
 			cobra.CheckErr(err)
 
 			statsChan, err := statistics.StartStatisticsCollection(ctx, inventoryInfo)
@@ -42,6 +50,7 @@ func genRootCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVarP(&version, "version", "v", false, "Show version information")
+	cmd.Flags().StringVar(&hostToAddEncryptedPassword, "add-encrypted-pass", "", "Specify the alias of a host in the host file for which you'd like to set an encrypted password")
 
 	return cmd
 }

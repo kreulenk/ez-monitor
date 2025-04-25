@@ -2,9 +2,11 @@ package inventory
 
 import (
 	"fmt"
+	"golang.org/x/term"
 	"gopkg.in/ini.v1"
 	"os"
 	"strconv"
+	"strings"
 )
 
 type Host struct {
@@ -28,6 +30,9 @@ func LoadInventory(filename string) ([]Host, error) {
 		return nil, fmt.Errorf("failed to load ini data: %s", err)
 	}
 
+	// If we see an encrypted password we will prompt the user for this value and then save it to this var for further passwords
+	var encPassword string
+
 	hostMap := make(map[string]Host)
 	for _, section := range cfg.Sections() {
 		hostAlias := section.Name()
@@ -49,7 +54,23 @@ func LoadInventory(filename string) ([]Host, error) {
 			case "username":
 				host.Username = key.Value()
 			case "password":
-				host.Password = key.Value()
+				if strings.HasPrefix(key.Value(), ezMonitorEncDelimiter) {
+					if encPassword == "" {
+						fmt.Println("Please enter your encryption password to decrypt the passwords in this file.")
+						encPasswordBytes, err := term.ReadPassword(int(os.Stdin.Fd()))
+						fmt.Println() // Print a newline after password input
+						if err != nil {
+							return nil, fmt.Errorf("failed to read encryption password: %s", err)
+						}
+						encPassword = string(encPasswordBytes)
+					}
+					host.Password, err = decrypt(key.Value(), encPassword)
+					if err != nil {
+						return nil, fmt.Errorf("failed to decrypt password: %s", err)
+					}
+				} else {
+					host.Password = key.Value()
+				}
 			case "address":
 				host.Address = key.Value()
 			case "port":
