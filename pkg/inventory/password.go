@@ -60,6 +60,11 @@ func BeginPasswordEncryptFlow(hostToAddEncryptedPassword, filename string) error
 	}
 	encPassword := string(encPasswordBytes)
 
+	err = verifyIfDifferentEncPassword(encPassword, hostToAddEncryptedPassword, cfg)
+	if err != nil {
+		return err
+	}
+
 	encryptedHostPassword, err := encrypt(hostPassword, encPassword)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt password: %s", err)
@@ -132,6 +137,36 @@ func exitIfNoResponse() error {
 	}
 	if strings.ToLower(response) != "y" {
 		os.Exit(0)
+	}
+	return nil
+}
+
+// verifyIfDifferentEncPassword will check if any encrypted passwords in the file were encrypted with a different password
+// than what is provided to the function
+func verifyIfDifferentEncPassword(encPass, newHostToEnc string, cfg *ini.File) error {
+	var hostsWithDifferentEncKeys []string
+	for _, section := range cfg.Sections() {
+		if section.Name() == newHostToEnc {
+			continue
+		}
+		if section.HasKey("password") {
+			passInFile := section.Key("password").Value()
+			if strings.HasPrefix(passInFile, ezMonitorEncDelimiter) {
+				_, err := decrypt(passInFile, encPass)
+				if err != nil {
+					hostsWithDifferentEncKeys = append(hostsWithDifferentEncKeys, section.Name())
+				}
+			}
+		}
+	}
+	if len(hostsWithDifferentEncKeys) > 0 {
+		fmt.Printf("The following host(s) likely have encrypted host passwords using a different "+
+			"encryption key than the one you just entered: %s\n", strings.Join(hostsWithDifferentEncKeys, ", "))
+		fmt.Printf("Would you like to continue with encrypting the password for %s? [y/n]\n", newHostToEnc)
+		err := exitIfNoResponse()
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
