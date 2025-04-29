@@ -59,9 +59,11 @@ func connectToHosts(inventoryInfo []inventory.Host) ([]ConnectionInfo, error) {
 	return hosts, nil
 }
 
-func getAuthMethod(host inventory.Host) (ssh.AuthMethod, error) {
+func getAuthMethods(host inventory.Host) ([]ssh.AuthMethod, error) {
+	var authMethods []ssh.AuthMethod
+
 	if host.Password != "" {
-		return ssh.Password(host.Password), nil
+		authMethods = append(authMethods, ssh.Password(host.Password))
 	}
 
 	if host.SshPrivateKeyFile != "" {
@@ -79,22 +81,21 @@ func getAuthMethod(host inventory.Host) (ssh.AuthMethod, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse SSH private key file %s: %s", dir, err)
 		}
-		return ssh.PublicKeys(signer), nil
+		authMethods = append(authMethods, ssh.PublicKeys(signer))
 	}
-	return nil, fmt.Errorf("either password or ssh_private_key_file must be specified for each host")
+
+	return authMethods, nil
 }
 
 func connectToHost(host inventory.Host) (*ssh.Client, *ssh.Session, error) {
-	authMethod, err := getAuthMethod(host)
+	authMethods, err := getAuthMethods(host)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	sshConfig := &ssh.ClientConfig{
-		User: host.Username,
-		Auth: []ssh.AuthMethod{
-			authMethod,
-		},
+		User:            host.Username,
+		Auth:            authMethods,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // Probably switch to ssh.FixedHostKey or ssh.KnownHosts
 		Timeout:         time.Second * 10,
 	}
