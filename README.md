@@ -1,5 +1,10 @@
 # EZ-Monitor
 
+<p>
+    <a href="https://github.com/kreulenk/ez-monitor/releases"><img src="https://img.shields.io/github/release/kreulenk/ez-monitor.svg" alt="Latest Release"></a>
+    <a href="https://goreportcard.com/report/github.com/kreulenk/ez-monitor"><img src="https://goreportcard.com/badge/github.com/kreulenk/ez-monitor"></a>
+</p>
+
 EZ-Monitor is a Linux system monitoring tool that uses SSH connections to query for information
 from a set of provided hosts. This allows you to get valuable information without the need
 for a dedicated agent on every server.
