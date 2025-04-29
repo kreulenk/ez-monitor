@@ -5,22 +5,17 @@ import "github.com/charmbracelet/bubbles/key"
 // keyMap defines keybindings. It satisfies to the help.KeyMap interface, which
 // is used to render the help menu.
 type keyMap struct {
-	Quit           key.Binding
-	Previous       key.Binding
-	Next           key.Binding
-	HistoricalView key.Binding
-	LiveView       key.Binding
+	Quit       key.Binding
+	Previous   key.Binding
+	Next       key.Binding
+	ViewToggle key.Binding
 }
 
 // HelpView is a helper method for rendering the help menu from the keymap.
 // Note that this view is not rendered by default and you must call it
 // manually in your application, where applicable.
 func (m Model) HelpView() string {
-	if m.activeView == LiveData {
-		return m.Help.ShortHelpView([]key.Binding{keys.Quit, keys.Previous, keys.Next, keys.HistoricalView})
-	} else {
-		return m.Help.ShortHelpView([]key.Binding{keys.Quit, keys.Previous, keys.Next, keys.LiveView})
-	}
+	return m.Help.ShortHelpView([]key.Binding{keys.Quit, keys.Previous, keys.Next, keys.ViewToggle})
 }
 
 var keys = keyMap{
@@ -36,12 +31,8 @@ var keys = keyMap{
 		key.WithKeys("right"),
 		key.WithHelp("→", "next host"),
 	),
-	LiveView: key.NewBinding(
-		key.WithKeys("l"),
-		key.WithHelp("l", "live data"),
-	),
-	HistoricalView: key.NewBinding(
-		key.WithKeys("h"),
-		key.WithHelp("h", "historical data"),
+	ViewToggle: key.NewBinding(
+		key.WithKeys("v"),
+		key.WithHelp("v", "view toggle"),
 	),
 }

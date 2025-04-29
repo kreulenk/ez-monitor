@@ -149,7 +149,7 @@ func (m *Model) View() string {
 			maxValStr,
 			m.styles.Bars.Render(result),
 			lipgloss.JoinHorizontal(lipgloss.Right,
-				lipgloss.NewStyle().PaddingRight(len(graph[0])/2-len(minValStr)/2).Render(m.statName),
+				lipgloss.NewStyle().PaddingRight(len(graph[0])/2-len(minValStr)-len(m.statName)/2).Render(m.statName),
 				minValStr,
 			),
 		),

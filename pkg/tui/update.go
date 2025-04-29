@@ -26,10 +26,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.currentIndex--
 				m.updateActiveCharts()
 			}
-		case key.Matches(msg, keys.HistoricalView):
-			m.activeView = HistoricalData
-		case key.Matches(msg, keys.LiveView):
-			m.activeView = LiveData
+		case key.Matches(msg, keys.ViewToggle):
+			if m.activeView == HistoricalData {
+				m.activeView = LiveData
+			} else {
+				m.activeView = HistoricalData
+			}
 		}
 	case statsMsg:
 		// Append the statistic to the statsCollector for each host
