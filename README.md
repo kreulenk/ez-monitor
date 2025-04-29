@@ -23,6 +23,11 @@ address=ubuntu-server-2
 username=some-user
 password=lets-avoid-defining-passwords-in-plain-text-if-we-can-:)
 port=23
+
+[host-3]
+address=rocky-server-1
+username=some-user
+password=`$EZ_MONITOR_ENCRYPTED;0000000000000000000000007e4a83986d07faed6729d29686b42c7c1e8bc37f`
 ```
 
 Inventory files are defined in an `ini` format where every `[section]` defined in brackets signifies a host entry. The
@@ -34,13 +39,31 @@ section name servers as an alias for each host. From there, the following connec
 - ssh_private_key_file
 - port
 
-There's currently no support for hashing passwords so it is recommended that you be extremely careful if you define them
-in your inventory files.
-
 Once you have your inventory file defined, simply run `ez-monitor` with a path to your inventory supplied as an argument.
 
 ```bash
 ez-monitor inventory.ini
+```
+
+### Handling Passwords
+
+If you have a host entry that requires you to enter a password, it is strongly encouraged that you encrypt the password
+using EZ-Monitor's password encryption functionality.
+
+Simple run
+
+```bash
+ez-monitor inventory.ini --add-encrypted-pass alias-of-host-in-inventory-file-to-encrypt
+```
+
+Then, follow the prompts to enter both the host's password, and a new encryption password which will be used
+for all hosts in this file.
+
+Finally, with the password entered, start EZ-Monitor as you normally would and follow the prompts
+
+```bash
+ez-monitor inventory.ini
+Please enter your encryption password to decrypt the passwords in this file.
 ```
 
 ## Installation
@@ -81,7 +104,7 @@ The high level plan for this project is as follows:
 | 1 | Support for ini inventory files                 |   ✅   |
 | 2 | Display real time data in bar graphs            |   ✅   |
 | 3 | Display historical data with line graphs        |   ✅   |
-| 4 | Support hashing of passwords in inventory files |   ❌   |
+| 4 | Support hashing of passwords in inventory files |   ✅   |
 | 5 | Improve the styling of the graphs displayed     |   ❌   |
 | 5 | TBD!                                            |   💥   |
 
