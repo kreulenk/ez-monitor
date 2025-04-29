@@ -41,7 +41,7 @@ type HostStat struct {
 func StartStatisticsCollection(ctx context.Context, inventoryInfo []inventory.Host) (chan *HostStat, error) {
 	hosts, err := connectToHosts(inventoryInfo) // We close the connections when the context cancels in the loop below
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to hosts: %s", err)
+		return nil, err
 	}
 
 	statsChan := make(chan *HostStat)

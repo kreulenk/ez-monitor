@@ -105,7 +105,7 @@ func connectToHost(host inventory.Host) (*ssh.Client, *ssh.Session, error) {
 
 	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", host.Address, port), sshConfig)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to connect to %s: %s", host.Address, err)
+		return nil, nil, fmt.Errorf("failed to connect to %s: %s", host.Alias, err)
 	}
 
 	session, err := client.NewSession()

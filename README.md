@@ -50,7 +50,7 @@ ez-monitor inventory.ini
 If you have a host entry that requires you to enter a password, it is strongly encouraged that you encrypt the password
 using EZ-Monitor's password encryption functionality.
 
-Simple run
+Simply run
 
 ```bash
 ez-monitor inventory.ini --add-encrypted-pass alias-of-host-in-inventory-file-to-encrypt
@@ -62,7 +62,7 @@ for all hosts in this file.
 Finally, with the password entered, start EZ-Monitor as you normally would and follow the prompts
 
 ```bash
-ez-monitor inventory.ini
+$ ez-monitor inventory.ini
 Please enter your encryption password to decrypt the passwords in this file.
 ```
 
