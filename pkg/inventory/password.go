@@ -21,25 +21,20 @@ func BeginPasswordEncryptFlow(hostToAddEncryptedPassword, filename string) error
 	}
 	hostSection, err := cfg.GetSection(hostToAddEncryptedPassword)
 	if err != nil { // This func only returns an error if the section does not exist
-		// If the section does not exist, we will add it
 		fmt.Printf("There is currently no entry in your inventory file for the host %s\n", hostToAddEncryptedPassword)
 		fmt.Println("Would you like an entry to be added for this host? [y/n]")
 		err = exitIfNoResponse()
 		if err != nil {
 			return err
 		}
-		hostSection, err = cfg.NewSection(hostToAddEncryptedPassword)
-		if err != nil {
-			return fmt.Errorf("failed to create new entry in inventory file for new host %s: %s", hostToAddEncryptedPassword, err)
-		}
-	}
-
-	if hostSection.HasKey("password") {
-		fmt.Printf("There is already a password entry in your inventory file for the host %s\n", hostToAddEncryptedPassword)
-		fmt.Println("Would you like to replace the password entry for this host? [y/n]")
-		err = exitIfNoResponse()
-		if err != nil {
-			return err
+	} else {
+		if hostSection.HasKey("password") {
+			fmt.Printf("There is already a password entry in your inventory file for the host %s\n", hostToAddEncryptedPassword)
+			fmt.Println("Would you like to replace the password entry for this host? [y/n]")
+			err = exitIfNoResponse()
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -69,9 +64,8 @@ func BeginPasswordEncryptFlow(hostToAddEncryptedPassword, filename string) error
 	if err != nil {
 		return fmt.Errorf("failed to encrypt password: %s", err)
 	}
-	hostSection.Key("password").SetValue(encryptedHostPassword)
 
-	err = addOrReplacePasswordValue(filename, hostToAddEncryptedPassword, encryptedHostPassword)
+	err = addOrReplacePasswordValue(filename, hostToAddEncryptedPassword, encryptedHostPassword, cfg)
 	if err != nil {
 		return fmt.Errorf("failed to save ini data: %s", err)
 	}
@@ -178,7 +172,7 @@ func verifyIfDifferentEncPassword(encPass, newHostToEnc string, cfg *ini.File) e
 // 1. Load in the ini inventory file
 // 2. Add or replace the password for the appropriate host. If the host does not exist, it will add a host value at the bottom of the file
 // 3. Replace the file with the new contents
-func addOrReplacePasswordValue(filename, hostToAddEncryptedPassword, encryptedHostPassword string) error {
+func addOrReplacePasswordValue(filename, hostToAddEncryptedPassword, encryptedHostPassword string, cfg *ini.File) error {
 	content, err := os.ReadFile(filename)
 	if err != nil {
 		return fmt.Errorf("failed to read file: %s", err)
@@ -186,51 +180,39 @@ func addOrReplacePasswordValue(filename, hostToAddEncryptedPassword, encryptedHo
 
 	lines := strings.Split(string(content), "\n")
 	var updatedLines []string
-	sectionFound := false
-	passwordUpdated := false
 	sectionHeader := "[" + hostToAddEncryptedPassword + "]"
-	newPasswordLine := fmt.Sprintf("password = `%s`", encryptedHostPassword)
+	newPasswordLine := fmt.Sprintf("password=`%s`", encryptedHostPassword)
 
-	for i := 0; i < len(lines); i++ {
-		line := lines[i]
-		trimmedLine := strings.TrimSpace(line)
+	if !cfg.HasSection(hostToAddEncryptedPassword) {
+		updatedLines = append(lines, sectionHeader, newPasswordLine)
+	} else {
+		for i := 0; i < len(lines); i++ {
+			trimmedLine := strings.TrimSpace(lines[i])
 
-		// Check if the current line is the section header
-		if trimmedLine == sectionHeader {
-			sectionFound = true
-			updatedLines = append(updatedLines, line)
+			// Check if the current line is the section header
+			if trimmedLine == sectionHeader {
+				updatedLines = append(updatedLines, lines[i])
+				iniPkgSection, _ := cfg.GetSection(hostToAddEncryptedPassword) // err only returned if does not exist
 
-			// Process the section to add or replace the password
-			for i++; i < len(lines); i++ {
-				trimmedLine = strings.TrimSpace(lines[i])
-
-				// Stop processing if a new section starts
-				if strings.HasPrefix(trimmedLine, "[") && strings.HasSuffix(trimmedLine, "]") {
-					updatedLines = append(updatedLines, newPasswordLine)
-					passwordUpdated = true
-					break
-				}
-
-				// Replace the password if it exists
-				if strings.HasPrefix(trimmedLine, "password") {
-					updatedLines = append(updatedLines, newPasswordLine)
-					passwordUpdated = true
+				if iniPkgSection.HasKey("password") { // Replace password if it exists
+					for i++; i < len(lines); i++ {
+						trimmedLine = strings.TrimSpace(lines[i])
+						if strings.HasPrefix(trimmedLine, "password") {
+							updatedLines = append(updatedLines, newPasswordLine)
+							break
+						} else {
+							updatedLines = append(updatedLines, lines[i])
+						}
+					}
 				} else {
-					updatedLines = append(updatedLines, lines[i])
+					updatedLines = append(updatedLines, newPasswordLine)
 				}
+
+			} else { // Continue adding any line not in the section
+				updatedLines = append(updatedLines, lines[i])
 			}
 		}
 
-		// Add the current line to the updated lines if not processed
-		if !passwordUpdated {
-			updatedLines = append(updatedLines, line)
-		}
-	}
-
-	// If the section was not found, add it at the end
-	if !sectionFound {
-		updatedLines = append(updatedLines, sectionHeader)
-		updatedLines = append(updatedLines, newPasswordLine)
 	}
 
 	// Write the updated content back to the file
