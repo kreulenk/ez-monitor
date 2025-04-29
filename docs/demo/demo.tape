@@ -13,7 +13,7 @@ Left
 Sleep 4s
 Left
 Sleep 6s
-Type "h"
+Type "v"
 Sleep 8s
 Right 2
 Sleep 6s
