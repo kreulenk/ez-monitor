@@ -7,7 +7,6 @@ import (
 	"github.com/kreulenk/ez-monitor/pkg/renderutils"
 	"github.com/kreulenk/ez-monitor/pkg/statistics"
 	"github.com/kreulenk/ez-monitor/pkg/unit"
-	"log/slog"
 	"math"
 	"time"
 )
@@ -96,9 +95,6 @@ func (m *Model) View() string {
 		maxTimestampInBucket := smallestTimestamp.Add(durationPerBucket * time.Duration(bucketIndex+1))
 
 		for ; allStatsIndex < len(m.allStats); allStatsIndex++ {
-			if m.statName == "memory" {
-				slog.Info(fmt.Sprintf("placing stat %d with value %f in bucket %d", allStatsIndex, m.allStats[allStatsIndex].Data, bucketIndex))
-			}
 			maxNum = math.Max(maxNum, m.allStats[allStatsIndex].Data)
 			if numBuckets > numBucketsWithActualData { // Only place data in a bucket once if we have more buckets than data
 				allStatsIndex++
