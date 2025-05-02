@@ -40,7 +40,6 @@ func BeginPasswordEncryptFlow(hostToAddEncryptedPassword, filename string) error
 
 	fmt.Printf("Enter the password you would like to set for the host %s:\n", hostToAddEncryptedPassword)
 	hostPasswordBytes, err := term.ReadPassword(int(os.Stdin.Fd()))
-	fmt.Println() // Print a newline after password input
 	if err != nil {
 		return fmt.Errorf("failed to read host password: %s", err)
 	}
@@ -49,7 +48,6 @@ func BeginPasswordEncryptFlow(hostToAddEncryptedPassword, filename string) error
 	fmt.Println("Enter your encryption password. This encryption password should be used for all passwords in this file. " +
 		"Make sure that you remember it as it will be required to decrypt the passwords when running ez-monitor in the future.")
 	encPasswordBytes, err := term.ReadPassword(int(os.Stdin.Fd()))
-	fmt.Println() // Print a newline after password input
 	if err != nil {
 		return fmt.Errorf("failed to read encryption password: %s", err)
 	}

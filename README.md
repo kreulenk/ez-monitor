@@ -68,7 +68,7 @@ Finally, with the password entered, start EZ-Monitor as you normally would and f
 
 ```bash
 $ ez-monitor inventory.ini
-Please enter your encryption password to decrypt the passwords in this file.
+Please enter your encryption password to decrypt the host passwords in this file.
 ```
 
 ## Installation

@@ -6,6 +6,7 @@ import (
 	"github.com/kreulenk/ez-monitor/pkg/inventory"
 	"github.com/mitchellh/go-homedir"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/knownhosts"
 	"os"
 	"sync"
 	"time"
@@ -93,10 +94,19 @@ func connectToHost(host inventory.Host) (*ssh.Client, *ssh.Session, error) {
 		return nil, nil, err
 	}
 
+	knownHostsFile, err := homedir.Expand("~/.ssh/known_hosts")
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to expand known_hosts file: %s", err)
+	}
+	hostKeyCallback, err := knownhosts.New(knownHostsFile)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to load known_hosts file: %s", err)
+	}
+
 	sshConfig := &ssh.ClientConfig{
 		User:            host.Username,
 		Auth:            authMethods,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // Probably switch to ssh.FixedHostKey or ssh.KnownHosts
+		HostKeyCallback: hostKeyCallback,
 		Timeout:         time.Second * 10,
 	}
 	port := 22
@@ -105,6 +115,11 @@ func connectToHost(host inventory.Host) (*ssh.Client, *ssh.Session, error) {
 	}
 
 	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", host.Address, port), sshConfig)
+	// This type of error checking could break on dependency bumps but this default error message for the known_hosts check failing isn't good enough
+	if err != nil && err.Error() == "ssh: handshake failed: knownhosts: key is unknown" {
+		return nil, nil, fmt.Errorf("failed to connect to %s: ssh: handshake failed: host's key in %s file is not yet present. You can simply ssh onto the host and accept the key to add it", host.Alias, knownHostsFile)
+	}
+
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to connect to %s: %s", host.Alias, err)
 	}

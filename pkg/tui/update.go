@@ -4,7 +4,9 @@ import (
 	"context"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/kreulenk/ez-monitor/pkg/renderutils"
 	"github.com/kreulenk/ez-monitor/pkg/statistics"
+	"os"
 )
 
 // statsMsg wraps the statistics.HostStat to implement tea.Msg.
@@ -51,30 +53,34 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		m.width = msg.Width
 
+		if os.Getenv("TERM_PROGRAM") == "Apple_Terminal" {
+			m.width = renderutils.Max(1, m.width-2)
+		}
+
 		// TODO we should probably use an interface to set these values at this point..
-		m.memBarChart.SetWidth(msg.Width/4 - 2)
-		m.memBarChart.SetHeight(msg.Height - 2)
+		m.memBarChart.SetWidth(m.width/4 - 2)
+		m.memBarChart.SetHeight(m.height - 2)
 
-		m.cpuBarChart.SetWidth(msg.Width/4 - 2)
-		m.cpuBarChart.SetHeight(msg.Height - 2)
+		m.cpuBarChart.SetWidth(m.width/4 - 2)
+		m.cpuBarChart.SetHeight(m.height - 2)
 
-		m.diskBarChart.SetWidth(msg.Width/4 - 2)
-		m.diskBarChart.SetHeight(msg.Height - 2)
+		m.diskBarChart.SetWidth(m.width/4 - 2)
+		m.diskBarChart.SetHeight(m.height - 2)
 
-		m.networkingSentChart.SetWidth(msg.Width/4 - 2)
-		m.networkingSentChart.SetHeight(msg.Height/2 - 2)
+		m.networkingSentChart.SetWidth(m.width/4 - 2)
+		m.networkingSentChart.SetHeight(m.height/2 - 2)
 
-		m.networkingReceivedChart.SetWidth(msg.Width/4 - 2)
-		m.networkingReceivedChart.SetHeight(msg.Height/2 - 2)
+		m.networkingReceivedChart.SetWidth(m.width/4 - 2)
+		m.networkingReceivedChart.SetHeight(m.height/2 - 2)
 
-		m.memLineGraph.SetWidth(msg.Width - 2)
-		m.memLineGraph.SetHeight(msg.Height/3 - 3)
+		m.memLineGraph.SetWidth(m.width - 2)
+		m.memLineGraph.SetHeight(m.height/3 - 3)
 
-		m.cpuLineGraph.SetWidth(msg.Width - 2)
-		m.cpuLineGraph.SetHeight(msg.Height/3 - 3)
+		m.cpuLineGraph.SetWidth(m.width - 2)
+		m.cpuLineGraph.SetHeight(m.height/3 - 3)
 
-		m.diskLineGraph.SetWidth(msg.Width - 2)
-		m.diskLineGraph.SetHeight(msg.Height/3 - 3)
+		m.diskLineGraph.SetWidth(m.width - 2)
+		m.diskLineGraph.SetHeight(m.height/3 - 3)
 		return m, tea.ClearScreen
 	}
 

@@ -56,7 +56,7 @@ func LoadInventory(filename string) ([]Host, error) {
 			case "password":
 				if strings.HasPrefix(key.Value(), ezMonitorEncDelimiter) {
 					if encPassword == "" {
-						fmt.Println("Please enter your encryption password to decrypt the passwords in this file.")
+						fmt.Println("Please enter your encryption password to decrypt the host passwords in this file.")
 						encPasswordBytes, err := term.ReadPassword(int(os.Stdin.Fd()))
 						fmt.Println() // Print a newline after password input
 						if err != nil {
