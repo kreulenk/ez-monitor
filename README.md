@@ -87,7 +87,7 @@ processor architecture. Then, untar the executable and move it to `/usr/local/bi
 
 E.g.
 ```
-curl -OL https://github.com/kreulenk/ez-monitor/releases/download/v1.1.0/ez-monitor-linux-amd64.tar.gz
+curl -OL https://github.com/kreulenk/ez-monitor/releases/download/v1.2.0/ez-monitor-linux-amd64.tar.gz
 tar -xzvf ez-monitor-linux-amd64.tar.gz
 mv ./ez-monitor /usr/local/bin/ez-monitor
 ```
